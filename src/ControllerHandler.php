@@ -26,6 +26,13 @@ use function in_array;
 use function preg_split;
 use function array_shift;
 
+/**
+ * This class allows to scan controller classes and define automatic routes.
+ *
+ * It has no other use. It is unnecessary to create an object from this class.
+ *
+ * @used-by Router::controller()
+ */
 final class ControllerHandler
 {
 
@@ -53,11 +60,6 @@ final class ControllerHandler
             $this->method2RouteHandler($method);
         }
 
-    }
-
-    public function __destruct()
-    {
-        // TODO: Implement __destruct() method.
     }
 
     private function controllerClassName(): void
@@ -144,7 +146,7 @@ final class ControllerHandler
         }
         if(isset($this->parsed[0]) &&
             in_array(strtolower($this->parsed[0]), ['main', 'index']) === FALSE){
-            $path .= '/' . implode('/', $this->parsed);
+            $path .= '/' . strtolower(implode('/', $this->parsed));
         }
         $intId = $floatId = $stringId = $boolId = 0;
         foreach ($parameters as $parameter) {

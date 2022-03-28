@@ -1,6 +1,6 @@
 <?php
 /**
- * RouterPageNotFoundException.php
+ * RouteNotFound.php
  *
  * This file is part of InitPHP.
  *
@@ -15,7 +15,6 @@ declare(strict_types=1);
 
 namespace InitPHP\Router\Exception;
 
-class RouterPageNotFoundException extends \Exception
+class RouteNotFound extends \RuntimeException
 {
-    protected $message = 'The requested page was not found.';
 }

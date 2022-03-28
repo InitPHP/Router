@@ -27,6 +27,13 @@ use function rtrim;
 use function ltrim;
 use function is_file;
 
+/**
+ * This class was created to run Middlewares.
+ *
+ * Other than that, it has no purpose. So you don't need to create an object with it.
+ *
+ * @used-by Router::process()
+ */
 final class MiddlewareEnforcer
 {
 
