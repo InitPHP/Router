@@ -1,0 +1,6 @@
+/.idea/
+/.vscode/
+/.vs/
+/vendor/
+/composer.lock
+/.phpunit.*
