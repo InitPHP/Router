@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tests\Unit;
+namespace Tests\Router\Unit;
 
 use \InitPHP\HTTP\{Request, Response, Stream};
 use \InitPHP\Router\Router;
@@ -34,28 +34,28 @@ class AutomaticRouterTest extends TestCase
             'GET'       => [
                 '/api'    => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'index'
                     ],
                     'options'   => []
                 ],
                 '/api/create'    => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'getCreate'
                     ],
                     'options'   => []
                 ],
                 '/api/show/:string'    => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'getShow'
                     ],
                     'options'   => []
                 ],
                 '/api/edit/:int'    => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'getEdit'
                     ],
                     'options'   => []
@@ -64,7 +64,7 @@ class AutomaticRouterTest extends TestCase
             'POST'      => [
                 '/api'    => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'postIndex'
                     ],
                     'options'   => []
@@ -73,7 +73,7 @@ class AutomaticRouterTest extends TestCase
             'PUT'       => [
                 '/api/update/:int' => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'putUpdate'
                     ],
                     'options'   => []
@@ -82,7 +82,7 @@ class AutomaticRouterTest extends TestCase
             'PATCH'     => [
                 '/api/update/:int' => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'patchUpdate'
                     ],
                     'options'   => []
@@ -91,7 +91,7 @@ class AutomaticRouterTest extends TestCase
             'DELETE'    => [
                 '/api/delete/:int' => [
                     'execute'   => [
-                        'Tests\\Unit\\ExampleController',
+                        'Tests\\Router\\Unit\\ExampleController',
                         'deleteDelete'
                     ],
                     'options'   => []

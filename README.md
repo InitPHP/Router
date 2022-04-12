@@ -99,7 +99,7 @@ if(($headers = function_exists('apache_request_headers') ? apache_request_header
 }
 
 $uri = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-        . '://' $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+        . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
 
 // Construct the HTTP request object.
 $request = new Request(

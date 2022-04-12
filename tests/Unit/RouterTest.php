@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Tests\Unit;
+namespace Tests\Router\Unit;
 
 use \InitPHP\Router\Exception\{RouteNotFound, UnsupportedMethod};
 use \InitPHP\HTTP\{Request, Response, Stream};

@@ -150,7 +150,7 @@ class Router
         $this->requestMethod = $this->currentMethod();
         $this->requestHost = $this->request->getUri()->getHost();
         $path = $this->request->getUri()->getPath();
-        $this->requestPath = substr($path, strlen($this->configs['basePath']));
+        $this->requestPath = empty($this->configs['basePath']) ? $path : substr($path, strlen($this->configs['basePath']));
         $this->requestPort = $this->requestPort();
         $this->requestScheme = $this->request->getUri()->getScheme();
         $this->requestIP = $_SERVER['REMOTE_ADDR'] ?? null;
@@ -847,10 +847,6 @@ class Router
         }
 
         $patterns = $this->getPatterns();
-        $basePath = $this->configs['basePath'];
-        if(!empty($basePath) && $basePath !== '/'){
-            $path = substr($path, strlen($basePath));
-        }
 
         foreach ($routes as $route => $value) {
             $arguments = [];
