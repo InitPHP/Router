@@ -969,7 +969,7 @@ class Router
         foreach ($reflector->getParameters() as $key => $value) {
             $class = null;
             if(($type = $value->getType()) !== null){
-                $class = ($type->isBuiltin()) ? new \ReflectionClass($type->getName()) : null;
+                $class = (!$type->isBuiltin()) ? new \ReflectionClass($type->getName()) : null;
             }
             if($class === null){
                 if(!isset($parameters[$i])){
