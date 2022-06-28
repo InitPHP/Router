@@ -917,7 +917,7 @@ class Router
         }
         $this->controllerMethodPrepare($route['execute']);
 
-        $controller = new static::$CController();
+        $controller = $this->getClassContainer(new \ReflectionClass(static::$CController));
 
         $this->controllerMiddlewarePropertyPrepare($controller, static::$CMethod, $middleware, self::POSITION_BEFORE);
         $this->response = $middleware->process($this->request, $this->response, $arguments, MiddlewareEnforcer::BEFORE);
@@ -1007,6 +1007,12 @@ class Router
 
     private function getClassContainer(\ReflectionClass $class): object
     {
+        if($class->isInstance($this->request)){
+            return $this->request;
+        }
+        if($class->isInstance($this->response)){
+            return $this->response;
+        }
         if(is_object($this->configs['container'])){
             return $this->configs['container']->get($class->getName());
         }
