@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 InitPHP
  * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0
+ * @version    1.0.2
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -19,7 +19,7 @@ use \Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
 use \Closure;
 use \InvalidArgumentException;
 use \RuntimeException;
-use \InitPHP\Router\Exception\{ControllerException, RouteNotFound, UnsupportedMethod};
+use InitPHP\Router\Exception\{ClassContainerException, ControllerException, RouteNotFound, UnsupportedMethod};
 
 use const FILTER_VALIDATE_IP;
 use const DIRECTORY_SEPARATOR;
@@ -129,6 +129,7 @@ class Router
             'path'          => null,
         ],
         'cachePath'             => __DIR__ . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR . 'route_cache',
+        'container'         => null,
     ];
 
     protected bool $hasRoute = false;
@@ -966,17 +967,27 @@ class Router
     {
         $arguments = [];
         $i = 0;
-        foreach ($reflector->getParameters() as $key => $value) {
+        $getParameters = $reflector->getParameters();
+        foreach ($getParameters as $parameter) {
             $class = null;
-            if(($type = $value->getType()) !== null){
+            if(($type = $parameter->getType()) !== null){
                 $class = (!$type->isBuiltin()) ? new \ReflectionClass($type->getName()) : null;
             }
             if($class === null){
-                if(!isset($parameters[$i])){
+                if(isset($parameters[$i])){
+                    $arguments[] = $parameters[$i];
+                    ++$i;
                     continue;
                 }
-                $arguments[] = $parameters[$i];
-                ++$i;
+                if($parameter->isDefaultValueAvailable()){
+                    $arguments[] = $parameter->getDefaultValue();
+                    ++$i;
+                    continue;
+                }
+                if($parameter->allowsNull()){
+                    $arguments[] = null;
+                    ++$i;
+                }
                 continue;
             }
             if($class->isInstance($this->request)){
@@ -988,11 +999,45 @@ class Router
                 continue;
             }
             if($class->isInstantiable()){
-                $class_name = $class->getName();
-                $arguments[] = new $class_name();
+                $arguments[] = $this->getClassContainer($class);
             }
         }
         return $arguments;
+    }
+
+    private function getClassContainer(\ReflectionClass $class): object
+    {
+        if(is_object($this->configs['container'])){
+            return $this->configs['container']->get($class->getName());
+        }
+        if(($constructor = $class->getConstructor()) === null){
+            return $class->newInstance();
+        }
+        $parameters = $constructor->getParameters();
+        if(empty($parameters)){
+            return $class->newInstance();
+        }
+        $arguments = [];
+        foreach ($parameters as $parameter) {
+            if($parameter->isDefaultValueAvailable()){
+                $arguments[] = $parameter->getDefaultValue();
+                continue;
+            }
+            if($parameter->hasType()){
+                if(($type = $parameter->getType()) !== null){
+                    if(!$type->isBuiltin()){
+                        $arguments[] = $this->getClassContainer(new \ReflectionClass($type->getName()));
+                        continue;
+                    }
+                }
+            }
+            if($parameter->allowsNull()){
+                $arguments[] = null;
+                continue;
+            }
+            throw new ClassContainerException('Unable to resolve parameter "'.$parameter->getName().'" of class "'.$class->getName().'".');
+        }
+        return $class->newInstanceArgs($arguments);
     }
 
     private function variantRoutePath(string $path): array
