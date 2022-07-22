@@ -664,7 +664,7 @@ class Router
         $hasRoute = isset($this->current_route) && !empty($this->current_route);
 
         if($hasRoute === FALSE){
-            $this->resolve = $this->response->withStatus(404);
+            $this->response = $this->response->withStatus(404);
             if(empty($this->error_404['execute'])){
                 throw new PageNotFoundException('Error 404 : Page Not Found');
             }
