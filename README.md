@@ -6,7 +6,7 @@ This is an open source library that lets you create and manage advanced routes f
 
 ## Features
 
-- Full support for GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD, AJAX and ANY request methods.
+- Full support for GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD and ANY request methods.
 - Variable request methods with (Laravel-like) `$_REQUEST['_method']`. (Default is off, optionally can be activated)
 - Controller support. (HomeController@about or HomeController::about)
 - Middleware/Filter (before and after) support.
@@ -23,14 +23,14 @@ This is an open source library that lets you create and manage advanced routes f
 
 ## Requirements
 
-- PHP 7.4 or higher
+- PHP 7.2 or later
 - Apache is; **AllowOverride All** should be set to and **mod_rewrite** should be on.
-- [InitPHP HTTP](https://github.com/InitPHP/HTTP)
+- Any library that implements the [Psr-7 HTTP Message Interface](https://www.php-fig.org/psr/psr-7/) and an emitter written for Psr-7. For example; [InitPHP HTTP](https://github.com/InitPHP/HTTP) Library
 
 ## Installation
 
 ```
-composer require initphp/router --no-dev
+composer require initphp/router
 ```
 
 Is Apache `.htaccess`
@@ -49,16 +49,12 @@ server {
 	listen 80;
 	server_name myinitphpdomain.dev;
 	root /var/www/myInitPHPDomain/public;
-
 	index index.php;
-
 	location / {
 		try_files $uri $uri/ /index.php?$query_string;
 	}
-
 	location ~ \.php$ {
 		fastcgi_split_path_info ^(.+\.php)(/.+)$;
-
 		fastcgi_pass unix:/var/run/php5-fpm.sock;
 		fastcgi_index index.php;
 		include fastcgi.conf;
@@ -67,25 +63,30 @@ server {
 }
 ```
 
-
 ## Configuration
 
 ```php
 $config = [
-    'controller'        => [
-        'path'      => null, //The full path to the directory where the Controller classes are kept.
-        'namespace' => null, //Namespace prefix of Controller classes, if applicable.
+    'paths'             => [
+        'controller'        => null, //The full path to the directory where the Controller classes are kept.
+        'middleware'        => null, //The full path to the directory where the Middleware classes are kept.
     ],
-    'middleware'        => [
-        'path'      => null, //The full path to the directory where the Middleware classes are kept.
-        'namespace' => null, //Namespace prefix of Middleware classes, if applicable.
+    'namespaces'        => [
+        'controller'        => null, //Namespace prefix of Controller classes, if applicable.
+        'middleware'        => null, //Namespace prefix of Middleware classes, if applicable.
     ],
-    'basePath'          => null, // If you are working in a subdirectory; identifies your working directory.
-    'variableMethods'   => false, // It makes the request method mutable with Laravel-like $_REQUEST['_method'].
+    'base_path'         => '/', // If you are working in a subdirectory; identifies your working directory.
+    'variable_method'   => false, // It makes the request method mutable with Laravel-like $_REQUEST['_method'].
 ];
 ```
 
 ## Usage
+
+The following example uses the [InitPHP HTTP](https://github.com/InitPHP/HTTP) library. If you wish, you can use this library using the command below, or you can perform similar operations using another library that uses the Psr-7 HTTP Message interface.
+
+```
+composer require initphp/http
+```
 
 _**See the Wiki for detailed documentation.**_
 
@@ -99,7 +100,10 @@ if(($headers = function_exists('apache_request_headers') ? apache_request_header
 }
 
 $uri = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-        . '://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'];
+        . '://' 
+        . ($_SERVER['SERVER_NAME'] ?? 'localhost')
+        . (isset($_SERVER['SERVER_PORT']) && !\in_array($_SERVER['SERVER_PORT'], [80, 443]) ? ':' . $_SERVER['SERVER_PORT'] : '')
+        . ($_SERVER['REQUEST_URI'] ?? '/');
 
 // Construct the HTTP request object.
 $request = new Request(
@@ -146,7 +150,7 @@ There are two primary ways to help:
 
 - Using the issue tracker, and
 - Changing the code-base.
-    
+
 ### Using the issue tracker
 
 Use the issue tracker to suggest feature requests, report bugs, and ask questions. This is also a great way to connect with the developers of the project as well as others who are interested in this solution.

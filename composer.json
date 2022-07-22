@@ -1,6 +1,6 @@
 {
     "name": "initphp/router",
-    "description": "InitPHP Router Library",
+    "description": "InitPHP HTTP Router Library",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -23,10 +23,11 @@
     ],
     "minimum-stability": "stable",
     "require": {
-        "php": ">=7.4",
-        "initphp/http": "^1.0"
+        "php": ">=7.2",
+        "psr/http-message": "^1.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "9.5"
+        "phpunit/phpunit": "9.5",
+        "initphp/http": "~1.0"
     }
 }

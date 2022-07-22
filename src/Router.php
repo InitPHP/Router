@@ -2,12 +2,12 @@
 /**
  * Router.php
  *
- * This file is part of InitPHP.
+ * This file is part of Router.
  *
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
- * @copyright  Copyright © 2022 InitPHP
- * @license    http://initphp.github.io/license.txt  MIT
- * @version    1.0.2
+ * @copyright  Copyright © 2022 Muhammet ŞAFAK
+ * @license    ./LICENSE  MIT
+ * @version    1.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -15,72 +15,45 @@ declare(strict_types=1);
 
 namespace InitPHP\Router;
 
+use \InitPHP\Router\Exception\{RouterException, PageNotFoundException, InvalidArgumentException};
 use \Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
-use \Closure;
-use \InvalidArgumentException;
-use \RuntimeException;
-use InitPHP\Router\Exception\{ClassContainerException, ControllerException, RouteNotFound, UnsupportedMethod};
-
-use const FILTER_VALIDATE_IP;
-use const DIRECTORY_SEPARATOR;
-
-use function filter_var;
-use function substr;
-use function strlen;
-use function strtr;
-use function strpos;
-use function strtoupper;
-use function strtolower;
-use function in_array;
-use function is_array;
-use function is_string;
-use function is_callable;
-use function is_file;
-use function file_put_contents;
-use function file_get_contents;
-use function serialize;
-use function unserialize;
-use function property_exists;
-use function method_exists;
-use function class_exists;
-use function trim;
-use function ltrim;
-use function rtrim;
-use function call_user_func_array;
-use function preg_replace;
-use function preg_match;
-use function array_shift;
-use function array_pop;
-use function end;
-use function explode;
-use function implode;
-use function array_reverse;
-use function array_diff_key;
-use function array_keys;
-use function current;
-use function key;
-use function array_merge;
-use function ob_start;
-use function ob_get_contents;
-use function ob_end_clean;
 
 class Router
 {
 
-    public const POSITION_BOTH = 0;
-    public const POSITION_BEFORE = 1;
-    public const POSITION_AFTER = 2;
+    public const BOTH = 0; // both
+    public const BEFORE = -1; // before
+    public const AFTER = 1; // after
 
-    protected const SUPPORTED_METHODS = [
-        'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD',
-        'XGET', 'XPOST', 'XPUT', 'XDELETE', 'XOPTIONS', 'XPATCH', 'XHEAD',
-        'ANY'
+    public const SUPPORTED_METHODS = [
+        'GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS',
+        'ANY',
     ];
 
-    protected RequestInterface $request;
-    protected ResponseInterface $response;
+    /** @var array  */
+    protected $cache_configs = [
+        'enable'    => false,
+        'path'      => null,
+        'ttl'       => 86400
+    ];
 
-    protected array $patterns = [
+    /** @var bool */
+    protected $cache_status = false;
+
+    protected $configs = [
+        'paths'             => [
+            'controller'    => null,
+            'middleware'    => null,
+        ],
+        'namespaces'        => [
+            'controller'    => null,
+            'middleware'    => null,
+        ],
+        'base_path'         => '/',
+        'variable_method'   => false,
+    ];
+
+    protected $patterns = [
         '{[^/]+}'           => '([^/]+)',
         ':any[0-9]?'        => '([^/]+)',
         '{any[0-9]?}'       => '([^/]+)',
@@ -106,150 +79,457 @@ class Router
         '{locale}'          => '([A-Za-z]{2}|[A-Za-z]{2}[\_\-]{1}[A-Za-z]{2})',
     ];
 
-    protected array $baseOptions = [], $last = [], $groupOptions = [],
-            $groupOptionsOrigins = [], $separator = ['::', '@'], $error404;
+    /** @var RequestInterface */
+    protected $request;
 
-    protected ?string $prefix = null, $domain = null;
-    protected ?int $port = null;
-    protected array $ip = [];
+    /** @var ResponseInterface */
+    protected $response;
 
-    protected array $routes = [];
+    /** @var Uri */
+    protected $uri;
 
-    protected array $names = [];
+    protected $container;
 
-    protected array $configs = [
-        'basePath'              => '/',
-        'variableMethod'        => false,
-        'middleware'            => [
-            'namespace'     => null,
-            'path'          => null,
+    protected $id = 0;
+
+    /** @var array */
+    protected $routes = [];
+
+    protected $methodIds = [];
+
+    protected $names = [];
+
+    protected $error_404 = [
+        'execute'   => null,
+        'options'   => [
+            'arguments' => [],
         ],
-        'controller'            => [
-            'namespace'     => null,
-            'path'          => null,
-        ],
-        'cachePath'             => __DIR__ . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR . 'route_cache',
-        'container'         => null,
     ];
 
-    protected bool $hasRoute = false;
+    protected $group_options = [];
 
-    protected string $requestMethod, $requestHost, $requestPath, $requestScheme;
-    protected ?string $requestIP = null;
-    protected ?int $requestPort = null;
+    private $current_route;
+    private $current_url;
+    private $current_ip;
+    private $current_method;
+    private $filter_objects = [];
+    private $content = '';
 
-    protected bool $cache = false;
 
-    protected static string $CController, $CMethod;
-    protected static array $CArguments = [];
-
-    public function __construct(RequestInterface &$request, ResponseInterface &$response, array $configs = [])
+    public function __construct(RequestInterface $request, ResponseInterface $response, array $configs = [])
     {
+        if(isset($configs['container'])){
+            $this->container = $configs['container'];
+            unset($configs['container']);
+        }
+        if(isset($configs['cache'])){
+            $this->cache_configs = \array_merge($this->cache_configs, $configs['cache']);
+            unset($configs['cache']);
+        }
+        $this->configs = \array_merge($this->configs, $configs);
         $this->request = &$request;
         $this->response = &$response;
-        $this->configs = array_merge($this->configs, $configs);
-        $this->requestMethod = $this->currentMethod();
-        $this->requestHost = $this->request->getUri()->getHost();
-        $path = $this->request->getUri()->getPath();
-        $this->requestPath = empty($this->configs['basePath']) ? $path : substr($path, strlen($this->configs['basePath']));
-        $this->requestPort = $this->requestPort();
-        $this->requestScheme = $this->request->getUri()->getScheme();
-        $this->requestIP = $_SERVER['REMOTE_ADDR'] ?? null;
-        if(is_file($this->configs['cachePath'])){
-            $this->cacheImport();
+        $this->uri = new Uri($this->request->getUri()->__toString());
+
+        $this->current_url = $this->uri->__toString();
+        $this->current_ip_boot();
+        $this->current_method_boot();
+
+        foreach (self::SUPPORTED_METHODS as $method) {
+            $this->methodIds[$method] = [];
         }
+
+        $this->cache_start();
     }
 
     public function __destruct()
     {
-        $this->routesReset();
-        unset($this->names);
+        $this->cache_stop();
+        $this->destroy();
     }
 
     public function getRoutes(?string $method = null): array
     {
+        $res = [];
         if($method === null){
-            return $this->routes;
+            foreach ($this->routes as $route) {
+                foreach ($route['methods'] as $_method) {
+                    if(!isset($res[$_method])){
+                        $res[$_method] = [];
+                    }
+                    $res[$_method][$route['path']] = [
+                        'execute'   => $route['execute'],
+                        'options'   => $route['options'],
+                    ];
+                }
+            }
+            return $res;
         }
-        $method = strtoupper($method);
-        return $this->routes[$method] ?? [];
+        $method = \strtoupper($method);
+        if(isset($this->methodIds[$method])){
+            foreach ($this->methodIds[$method] as $id) {
+                $route = $this->routes[$id];
+                $res[$route['path']] = [
+                    'execute'   => $route['execute'],
+                    'options'   => $route['options'],
+                ];
+            }
+        }
+        return $res;
     }
 
-    public function routesReset(): void
+    public function destroy(): void
     {
+        $this->content = '';
         $this->routes = [];
+        $this->methodIds = [];
+        $this->id = 0;
+        $this->names = [];
+        $this->error_404 = [
+            'execute'   => null,
+            'options'   => [
+                'arguments' => [],
+            ],
+        ];
+        unset($this->current_route, $this->current_url, $this->current_method, $this->current_ip);
     }
 
     /**
-     * Adds one or more Middleware to be applied to the last route before it.
+     * Adds a route.
      *
-     * @param string[]|string|Closure[]|Closure $middleware <p>Middleware to be applied.</p>
-     * @param int $position <p>Application position/method. [Router::POSITION_BOTH|Router::POSITION_BEFORE|Router::POSITION_AFTER]</p>
+     * @param string|string[] $methods <p>An array or "|" separated string.</p>
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
      * @return $this
-     * @throws InvalidArgumentException <p>If a parameter other than expected is given.</p>
-     * @throws RuntimeException <p>If it cannot find the route defined before it.</p>
      */
-    public function middleware($middleware, int $position = self::POSITION_BOTH): self
+    public function register($methods, string $path, $execute, array $options = []): self
     {
-        if($this->cache){
+        if($this->cache_status){
             return $this;
         }
-        if(in_array($position, [self::POSITION_BOTH, self::POSITION_BEFORE, self::POSITION_AFTER], true) === FALSE){
-            throw new InvalidArgumentException("The value given for the parameter \$position is not valid.");
+        if(!\is_string($execute) && !\is_callable($execute) && !\is_array($execute)){
+            throw new InvalidArgumentException("\$execute can be string, callable, or array.");
         }
-        if(is_array($middleware)){
-            foreach ($middleware as $middle) {
-                $this->middleware($middle, $position);
+        if(!\is_string($methods) && !\is_array($methods)){
+            throw new InvalidArgumentException("\$methods can be string or array.");
+        }
+
+        ++$this->id;
+
+        $options = $this->options_merge($this->configs, $this->group_options, $options);
+
+        $methods = $this->register_methods_check($methods);
+
+        $path = (isset($options['base_path']) && $options['base_path'] != '/' ? \rtrim($options['base_path'], '/') . '/' : '')
+            . ($options['prefix'] ?? '')
+            . $path;
+
+        $uri = clone $this->uri;
+        $uri->withPath($path);
+
+        if(isset($options['host']) && !empty($options['host']) && \is_string($options['host'])){
+            $uri->withHost($options['host']);
+            unset($options['host']);
+        }
+        if(isset($options['port']) && !empty($options['port']) && \is_int($options['port'])){
+            $uri->withPort($options['port']);
+            unset($options['port']);
+        }
+        if(isset($options['scheme']) && \in_array($options['scheme'], ['http', 'https'], true)){
+            $uri->withScheme($options['scheme']);
+            unset($options['scheme']);
+        }
+
+        if(isset($options['name'])){
+            if(\is_array($options['name'])){
+                $options['name'] = \implode('', $options['name']);
             }
-            return $this;
+            if(isset($options['as'])){
+                $options['name'] = $options['as'] . $options['name'];
+            }
+            $name = \trim($options['name']);
+            unset($options['name']);
+            if(isset($this->names[$name])){
+                throw new RouterException('The name "' . $name . '" is already in use by another route.');
+            }
+            $this->names[$name] = $this->id;
         }
-        if(!is_string($middleware) && !($middleware instanceof Closure)){
-            throw new InvalidArgumentException('The middleware type can be "string", "string[]", "\\Closure" or "\\Closure[]".');
-        }
-        if(!isset($this->last['method']) || !isset($this->last['path'])){
-            throw new RuntimeException('The last added path could not be found.');
-        }
-        switch ($position) {
-            case self::POSITION_BEFORE:
-                $optionsId = 'before_middleware';
-                break;
-            case self::POSITION_AFTER:
-                $optionsId = 'after_middleware';
-                break;
-            case self::POSITION_BOTH:
-            default:
-                $optionsId = 'middleware';
-        }
-        $method = $this->last['method'];
-        $path = $this->last['path'];
-        $this->routes[$method][$path]['options'][$optionsId][] = $middleware;
+        $this->routes[$this->id] = [
+            'id'        => $this->id,
+            'methods'   => $methods,
+            'path'      => $uri->__toString(),
+            'execute'   => $execute,
+            'options'   => $options,
+        ];
+        $this->method_route_register($this->id, $methods);
+
         return $this;
     }
 
     /**
-     * Names the last route added before it.
+     * @see Router::register()
+     * @param string|string[] $methods
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function add($methods, string $path, $execute, array $options = []): self
+    {
+        return $this->register($methods, $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function get(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['GET'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function post(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['POST'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function put(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['PUT'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function delete(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['DELETE'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function options(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['OPTIONS'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function patch(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['PATCH'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function head(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['HEAD'], $path, $execute, $options);
+    }
+
+    /**
+     * @see Router::register()
+     * @param string $path
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function any(string $path, $execute, array $options = []): self
+    {
+        return $this->register(['ANY'], $path, $execute, $options);
+    }
+
+    /**
+     * It defines the 404 error page.
      *
-     * @param string $name <p>The name of the route.</p>
+     * @param string|callable|array $execute
+     * @param array $options
+     * @return $this
+     */
+    public function error_404($execute, array $options = []): self
+    {
+        if($this->cache_status){
+            return $this;
+        }
+        if(!\is_array($execute) && !\is_string($execute) && !\is_callable($execute)){
+            throw new InvalidArgumentException("\$execute can be string, callable, or array.");
+        }
+        $this->error_404 = [
+            'execute'   => $execute,
+            'options'   => \array_merge($this->error_404['options'], $options)
+        ];
+        return $this;
+    }
+
+    /**
+     * It is used for routing by grouping urls with a path prefix.
+     *
+     * @param string $prefix
+     * @param \Closure $group
+     * @param array $options
+     * @return void
+     */
+    public function group(string $prefix, \Closure $group, array $options = []): void
+    {
+        if($this->cache_status){
+            return;
+        }
+        $prev_group_options = $this->group_options;
+        $options['prefix'] = $prefix;
+        $this->group_options = $this->options_merge($this->group_options, $options);
+        \call_user_func_array($group, [$this]);
+        $this->group_options = $prev_group_options;
+    }
+
+    /**
+     * Provides domain-based route grouping.
+     *
+     * @param string $host
+     * @param \Closure $group
+     * @param array $options
+     * @return void
+     */
+    public function domain(string $host, \Closure $group, array $options = []): void
+    {
+        if($this->cache_status){
+            return;
+        }
+        $prev_group_options = $this->group_options;
+        $options['host'] = $host;
+        $this->group_options = $this->options_merge($this->group_options, $options);
+        \call_user_func_array($group, [$this]);
+        $this->group_options = $prev_group_options;
+    }
+
+    /**
+     * It only does route grouping for a specific port.
+     *
+     * @param int $port
+     * @param \Closure $group
+     * @param array $options
+     * @return void
+     */
+    public function port(int $port, \Closure $group, array $options = []): void
+    {
+        if($this->cache_status){
+            return;
+        }
+        $prev_group_options = $this->group_options;
+        $options['port'] = $port;
+        $this->group_options = $this->options_merge($this->group_options, $options);
+        \call_user_func_array($group, [$this]);
+        $this->group_options = $prev_group_options;
+    }
+
+    /**
+     * Defines routes that will run on requests from one or more IPs.
+     *
+     * @param string|string[] $ip
+     * @param \Closure $group
+     * @param array $options
+     * @return void
+     */
+    public function ip($ip, \Closure $group, array $options = []): void
+    {
+        if($this->cache_status){
+            return;
+        }
+        $prev_group_options = $this->group_options;
+        $options['ip'] = $this->confirm_ip_addresses($ip);
+        $this->group_options = $this->options_merge($this->group_options, $options);
+        \call_user_func_array($group, [$this]);
+        $this->group_options = $prev_group_options;
+    }
+
+    /**
+     * Defines routes for a resource controller.
+     *
+     * @param string $prefix
+     * @param string $controller
+     * @return void
+     */
+    public function resource(string $prefix, string $controller)
+    {
+        if($this->cache_status){
+            return;
+        }
+        $prefix = \trim($prefix, '/');
+        $name_prefix = \str_replace('/', '.', $prefix);
+        $controller = $this->controllerFind($controller);
+
+        $this->register(['GET'], ('/' . $prefix), ($controller . '::index'), ['name' => ($name_prefix . '.index')])
+            ->register(['GET'], ('/' . $prefix . '/create'), ($controller . '::create'), ['name' => ($name_prefix . '.create')])
+            ->register(['POST'], ('/' . $prefix), ($controller . '::store'), ['name' => ($name_prefix . '.store')])
+            ->register(['GET'], ('/' . $prefix . '/{' . $prefix . '}'), ($controller . '::show'), ['name' => ($name_prefix . '.show')])
+            ->register(['GET'], ('/' . $prefix . '/{' . $prefix . '}/edit'), ($controller . '::edit'), ['name' => ($name_prefix . '.edit')])
+            ->register(['PUT', 'PATCH'], ('/' . $prefix . '/{' . $prefix . '}'), ($controller . '::update'), ['name' => ($name_prefix . '.update')])
+            ->register(['DELETE'], ('/' . $prefix . '/{'.$prefix.'}'), ($controller . '::destroy'), ['name' => ($name_prefix . '.destroy')]);
+    }
+
+    /**
+     * Names the route before it.
+     *
+     * @param string $name
      * @return $this
      */
     public function name(string $name): self
     {
-        if($this->cache){
+        if($this->cache_status){
             return $this;
         }
-        if(!isset($this->last['method']) || !isset($this->last['path'])){
-            throw new RuntimeException('The last added path could not be found.');
+        if(!isset($this->routes[$this->id])){
+            throw new RouterException('The route to add the name could not be found.');
         }
-        $method = $this->last['method'];
-        $path = $this->last['path'];
-        $name = ($this->groupOptions['as'] ?? '') . trim($name);
-        $this->routes[$method][$path]['options']['name'] = $name;
-        $this->names[$name] = $this->last['routePath'];
+        if(isset($this->routes[$this->id]['options']['as'])){
+            $name = $this->routes[$this->id]['options']['as'] . $name;
+        }
+        $name = \trim($name);
+        if(isset($this->names[$name])){
+            throw new RouterException('The name "' . $name . '" is already in use by another route.');
+        }
+        $this->names[$name] = $this->id;
         return $this;
     }
 
     /**
-     * Generates the url for a named route.
+     * Generates a URL for a named route.
      *
      * @param string $name
      * @param array $arguments
@@ -257,697 +537,389 @@ class Router
      */
     public function route(string $name, array $arguments = []): string
     {
-        $path = $this->names[$name] ?? $name;
+        $name = \trim($name);
+        if(!isset($this->names[$name])){
+            return $name;
+        }
+        $id = $this->names[$name];
+        $path = $this->routes[$id]['path'];
         if(empty($arguments)){
             return $path;
         }
         $replace = [];
         foreach ($arguments as $key => $value) {
-            $key = trim($key, ':{}');
-            $replace[':' . $key] = $value;
-            $replace['{' . $key . '}'] = $value;
+            $key = \trim($key, ':{} ');
+            if(\is_object($value) && \method_exists($value, '__toString')){
+                $value = $value->__toString();
+            }else{
+                $value = (string)$value;
+            }
+            $replace['{'.$key.'}'] = $value;
+            $replace[':'.$key] = $value;
         }
-        return strtr($path, $replace);
+        return \strtr($path, $replace);
     }
 
     /**
-     * Saves a route.
+     * Defines the middleware to be applied to the last added route before it.
      *
-     * @used-by Router::add()
-     * @used-by Router::get()
-     * @used-by Router::post()
-     * @used-by Router::put()
-     * @used-by Router::delete()
-     * @used-by Router::options()
-     * @used-by Router::patch()
-     * @used-by Router::head()
-     * @used-by Router::xget()
-     * @used-by Router::xpost()
-     * @used-by Router::xput()
-     * @used-by Router::xdelete()
-     * @used-by Router::xoptions()
-     * @used-by Router::xpatch()
-     * @used-by Router::xhead()
-     * @param string $method <p>A supported request method.</p>
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|array|Closure $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
+     * @param string|callable $filter <p>
+     * A callable function or middleware class name that extends the \InitPHP\Router\Middleware class.
+     * </p>
+     * @param int $position <p>Router::BEFORE, Router::AFTER  or Router::BOTH</p>
      * @return $this
-     * @throws UnsupportedMethod <p>If the request method declared in the $method parameter is not supported.</p>
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
      */
-    public function register(string $method, string $path, $execute, array $options = []): self
+    public function filter($filter, int $position = self::BOTH): self
     {
-        if($this->cache){
+        if($this->cache_status){
             return $this;
         }
-        if(!is_string($execute) && !is_array($execute) && !is_callable($execute)){
-            throw new InvalidArgumentException("\$execute is not valid for " . $path . ".");
+        if(!isset($this->routes[$this->id])){
+            throw new RouterException('The route to add the filter could not be found.');
         }
-        $method = strtoupper($method);
-        if(in_array($method, self::SUPPORTED_METHODS, true) === FALSE){
-            throw new UnsupportedMethod('The route method (' . $method . ') you want to add is not supported. Supported methods are: ' . implode(', ', self::SUPPORTED_METHODS));
+        if(!\is_string($filter) && !\is_callable($filter)){
+            throw new RouterException('Middleware/filter can only be string or callable.');
         }
-        $paths = $this->variantRoutePath($path);
-        $options = array_merge($this->baseOptions, $options);
-        if($this->domain !== null){
-            $options['domain'] = $this->domain;
+        if(!\in_array($position, [self::BEFORE, self::BOTH, self::AFTER], true)){
+            throw new RouterException("The value given for the parameter \$position is not valid.");
         }
-        if($this->port !== null){
-            $options['port'] = $this->port;
+        if(!isset($this->routes[$this->id]['options']['middleware'])){
+            $this->routes[$this->id]['options']['middleware'] = [];
         }
-        if(!empty($this->ip)){
-            $options['ip'] = $this->ip;
-        }
-        if(!empty($this->groupOptions)){
-            $groupOptions = $this->groupOptions;
-            if(isset($groupOptions['as'])){
-                unset($groupOptions['as']);
-            }
-            foreach ($groupOptions as $key => $value) {
-                $options[$key] = $value . ($options[$key] ?? '');
-            }
-        }
-        $base_path = ($options['domain'] ?? '')
-                . (isset($options['port']) ? ':' . $options['port'] : '');
-        $variant_base_path = $base_path . (isset($options['ip']) ? '[' . implode(',', $options['ip']) . ']' : '');
-
-        if(!empty($this->configs['basePath']) && $this->configs['basePath'] !== '/'){
-            $base_path .= $this->configs['basePath'];
-        }
-        $lastVariant = '';
-        foreach ($paths as $variant) {
-            $path = $variant_base_path . $variant;
-            $this->routes[$method][$path] = [
-                'execute'   => $execute,
-                'options'   => $options,
-            ];
-            $lastVariant = $variant;
-        }
-
-        $routePath = $this->requestScheme . '://'
-                    . ($options['domain'] ?? $this->requestHost)
-                    . (isset($options['port']) ? ':' . $options['port'] : (($this->requestPort != 80 && $this->requestPort != 443) ? ':'. $this->requestPort : ''))
-                    . ($this->configs['basePath'] !== '/' ? $this->configs['basePath'] : '')
-                    . $lastVariant;
-        if(isset($options['name']) && is_string($options['name'])){
-            $name = ($this->groupOptions['as'] ?? '') . $options['name'];
-            $this->names[$name] = $routePath;
-            unset($options['name']);
-        }
-
-        $this->last = [
-            'path'      => $path,
-            'method'    => $method,
-            'routePath' => $routePath,
-        ];
-        return $this;
-    }
-
-
-    /**
-     * Defines a route for one or more methods.
-     *
-     * @param string|string[] $methods <p>String or array describing which request methods the route will run. If you are declaring a string for more than one method; Separate methods with a straight line (|).</p>
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws Exception\UnsupportedMethod <p>If it tries to define a route for an unsupported request method.</p>
-     * @throws InvalidArgumentException <p>If $methods or $execute parameters are an unsupported type.</p>
-     */
-    public function add($methods, string $path, $execute, array $options = []): self
-    {
-        if($this->cache){
-            return $this;
-        }
-        if(is_string($methods)){
-            $methods = explode('|', $methods);
-        }
-        if(!is_array($methods)){
-            throw new InvalidArgumentException('\$methods must be an array. Or string separated by "|".');
-        }
-        foreach ($methods as $method) {
-            $this->register($method, $path, $execute, $options);
+        switch ($position) {
+            case self::BEFORE:
+                if(!isset($this->routes[$this->id]['options']['middleware']['before'])){
+                    $this->routes[$this->id]['options']['middleware']['before'] = [];
+                }
+                $this->routes[$this->id]['options']['middleware']['before'][] = $filter;
+                break;
+            case self::AFTER:
+                if(!isset($this->routes[$this->id]['options']['middleware']['after'])){
+                    $this->routes[$this->id]['options']['middleware']['after'] = [];
+                }
+                $this->routes[$this->id]['options']['middleware']['after'][] = $filter;
+                break;
+            default:
+                $this->routes[$this->id]['options']['middleware'][] = $filter;
         }
         return $this;
     }
 
     /**
-     * Defines a route for the GET request method.
+     * Defines the middleware to be applied to the last added route before it.
      *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
+     * @see Router::filter()
+     * @param string|callable $middleware
+     * @param int $position
      * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
      */
-    public function get(string $path, $execute, array $options = []): self
+    public function middleware($middleware, int $position = self::BOTH): self
     {
-        return $this->register('GET', $path, $execute, $options);
+        return $this->filter($middleware, $position);
     }
 
     /**
-     * Defines a route for the POST request method.
+     * Adds a new pattern to be used.
      *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
+     * @param string $key
+     * @param string $pattern
      * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
      */
-    public function post(string $path, $execute, array $options = []): self
+    public function pattern(string $key, string $pattern): self
     {
-        return $this->register('POST', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the PUT request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function put(string $path, $execute, array $options = []): self
-    {
-        return $this->register('PUT', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the DELETE request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function delete(string $path, $execute, array $options = []): self
-    {
-        return $this->register('DELETE', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the OPTIONS request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function options(string $path, $execute, array $options = []): self
-    {
-        return $this->register('OPTIONS', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the PATCH request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function patch(string $path, $execute, array $options = []): self
-    {
-        return $this->register('PATCH', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the HEAD request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function head(string $path, $execute, array $options = []): self
-    {
-        return $this->register('HEAD', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax GET request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xget(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XGET', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax POST request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xpost(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XPOST', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax PUT request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xput(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XPUT', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax DELETE request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xdelete(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XDELETE', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax OPTIONS request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xoptions(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XOPTIONS', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax PATCH request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xpatch(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XPATCH', $path, $execute, $options);
-    }
-
-    /**
-     * Defines a route for the Ajax HEAD request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function xhead(string $path, $execute, array $options = []): self
-    {
-        return $this->register('XHEAD', $path, $execute, $options);
-    }
-
-    /**
-     * It defines a route that can run on every request method.
-     *
-     * @param string $path <p>The path to run the route.</p>
-     * @param string|\Closure|array $execute <p>The function or method to be executed when the route is run.</p>
-     * @param array $options <p>Associative array that defines route-specific options.</p>
-     * @return $this
-     * @throws InvalidArgumentException <p>If $execute parameters are an unsupported type.</p>
-     */
-    public function any(string $path, $execute, array $options = []): self
-    {
-        return $this->register('ANY', $path, $execute, $options);
-    }
-
-    /**
-     * Groups routes with a prefix.
-     *
-     * @param string $prefix <p>The prefix to be added to the route paths.</p>
-     * @param Closure $group <p>The function to use for grouping.</p>
-     * @param array $options <p>Associative array declaring options to apply to routes under Group.</p>
-     * @return void
-     */
-    public function group(string $prefix, Closure $group, array $options = []): void
-    {
-        if($this->cache){
-            return;
+        $key = \trim($key, ':{}');
+        if(\substr($pattern, 0, 1) != '(' && \substr($pattern, -1) != ')'){
+            $pattern = '(' . $pattern . ')';
         }
-        $this->groupOptionsSetter($options);
-        $tmpPrefix = $this->prefix ?? '';
-        $this->prefix = $tmpPrefix . $prefix;
-        call_user_func_array($group, [$this]);
-        $this->prefix = empty($tmpPrefix) ? null : $tmpPrefix;
-        $this->groupOptionsReverseSync();
+        $this->patterns[':' . $key] = $pattern;
+        $this->patterns['{' . $key . '}'] = $pattern;
+        return $this;
     }
 
     /**
-     * It groups routes under a domain.
+     * Adds a new pattern to be used.
      *
-     * @param string $domain <p>The domain where the routes within the group will run.</p>
-     * @param Closure $group <p>The function to use for grouping.</p>
-     * @param array $options <p>Associative array declaring options to apply to routes under Group.</p>
-     * @return void
-     */
-    public function domain(string $domain, Closure $group, array $options = []): void
-    {
-        if($this->cache){
-            return;
-        }
-        $this->groupOptionsSetter($options);
-        $this->domain = $domain;
-        call_user_func_array($group, [$this]);
-        $this->domain = null;
-        $this->groupOptionsReverseSync();
-    }
-
-    /**
-     * It groups routes to work only on requests coming through a port.
-     *
-     * @param int $port <p>Required request port to run routes.</p>
-     * @param Closure $group <p>The function to use for grouping.</p>
-     * @param array $options <p>Associative array declaring options to apply to routes under Group.</p>
-     * @return void
-     */
-    public function port(int $port, Closure $group, array $options = []): void
-    {
-        if($this->cache){
-            return;
-        }
-        $this->groupOptionsSetter($options);
-        $this->port = $port;
-        call_user_func_array($group, [$this]);
-        $this->port = null;
-        $this->groupOptionsReverseSync();
-    }
-
-    /**
-     * Groups routes to work only on requests from specific IP.
-     *
-     * @param string|string[] $ip <p>The IP address string or array of IP addresses from which the routes will run.</p>
-     * @param Closure $group <p>The function to use for grouping.</p>
-     * @param array $options <p>Associative array declaring options to apply to routes under Group.</p>
-     * @return void
-     */
-    public function ip($ip, Closure $group, array $options = []): void
-    {
-        if($this->cache){
-            return;
-        }
-        $this->groupOptionsSetter($options);
-        $this->ip = $this->confirmIPAddresses($ip);
-        call_user_func_array($group, [$this]);
-        $this->ip = [];
-        $this->groupOptionsReverseSync();
-    }
-
-    /**
-     * Creates routes for methods by analyzing a controller class.
-     *
-     * @link https://github.com/initphp/router/Wiki/05.Automatic-Routes
-     * @param string $controller <p>The Controller class to be analyzed.</p>
-     * @param string $prefix <p>The prefix to use in routes. It may be empty string.</p>
-     * @return void
-     * @throws ControllerException
-     */
-    public function controller(string $controller, string $prefix = ''): void
-    {
-        if($this->cache){
-            return;
-        }
-        $tmpPrefix = $this->prefix ?? '';
-        new ControllerHandler(($tmpPrefix . $prefix), $this->controllerFind($controller), $this);
-        $this->prefix = empty($tmpPrefix) ? null : $tmpPrefix;
-    }
-
-    /**
-     * Defines the route to run as a 404 error page if no suitable route is found.
-     *
-     * @link https://github.com/initphp/router/Wiki/06.404-Error
-     * @param string|\Closure|array $execute <p>The function or controller method to execute.</p>
-     * @param array $options <p>Associative array declaring options.</p>
-     * @return void
-     */
-    public function error_404($execute, array $options = []): void
-    {
-        if($this->cache){
-            return;
-        }
-        if(isset($options['params'])){
-            $arguments = $options['params'];
-            unset($options['params']);
-        }elseif(isset($options['arguments'])){
-            $arguments = $options['arguments'];
-            unset($options['arguments']);
-        }else{
-            $arguments = [];
-        }
-        $this->error404 = [
-            'execute'   => $execute,
-            'options'   => array_merge($this->baseOptions, $options),
-            'arguments' => $arguments,
-        ];
-    }
-
-    /**
-     * Defines a custom pattern that can be used on routes.
-     *
-     * @link https://github.com/initphp/router/Wiki/07.Patterns#add-pattern
-     * @param string $key <p></p>
-     * @param string $pattern <p></p>
+     * @see Router::pattern()
+     * @param string $key
+     * @param string $pattern
      * @return $this
-     * @throws InvalidArgumentException <p>If $key is already defined or predefined.</p>
      */
     public function where(string $key, string $pattern): self
     {
-        $key = ltrim(trim($key, '{}'), ':');
-        $pattern = '(' . trim($pattern, '()') . ')';
-        if(isset($this->patterns[':' . $key])){
-            throw new InvalidArgumentException('');
-        }
-        $this->patterns[':'.$key] = $pattern;
-        $this->patterns['{'.$key.'}'] = $pattern;
-        return $this;
+        return $this->pattern($key, $pattern);
     }
 
     /**
-     * Returns the full name of the running controller class.
-     *
-     * @return string|null
-     */
-    public function currentController(): ?string
-    {
-        return static::$CController ?? null;
-    }
-
-    /**
-     * Returns the name of the Controller method that is run.
-     *
-     * @return string|null
-     */
-    public function currentCMethod(): ?string
-    {
-        return static::$CMethod ?? null;
-    }
-
-    /**
-     * Returns the arguments as an array, if any.
-     *
-     * @return array
-     */
-    public function currentCArguments(): array
-    {
-        return static::$CArguments ?? [];
-    }
-
-    /**
-     * Loads routes from cache file.
-     *
-     * @return void
-     */
-    protected function cacheImport(): void
-    {
-        if(($read = @file_get_contents($this->configs['cachePath'])) === FALSE){
-            return;
-        }
-        $cache = unserialize($read);
-        if(!isset($cache['routes']) || !isset($cache['names'])){
-            return;
-        }
-        $this->routes = $cache['routes'];
-        $this->names = $cache['names'];
-        $this->cache = true;
-    }
-
-    /**
-     * It deletes the cache file if any.
-     *
-     * @return void
-     */
-    public function cacheDelete(): void
-    {
-        if(is_file($this->configs['cachePath'])){
-            @unlink($this->configs['cachePath']);
-        }
-    }
-
-    /**
-     * Extracts routes to a cache file.
-     *
-     * @return void
-     */
-    public function cacheExport(): void
-    {
-        @file_put_contents($this->configs['cachePath'], serialize(['routes' => $this->routes, 'names' => $this->names]));
-    }
-
-    /**
-     * It finds the appropriate route, runs it, and returns a response object.
+     * It finds the route to run and runs it.
      *
      * @return ResponseInterface
+     * @throws \ReflectionException
      */
     public function dispatch(): ResponseInterface
     {
-        $route = $this->resolve($this->requestMethod, $this->requestPath, [
-            'domain'    => $this->requestHost,
-            'port'      => $this->requestPort,
-            'ip'        => $this->requestIP,
-        ]);
-        return $this->hasRoute ? $this->process($route) : $this->process404($route);
-    }
-
-    public function resolve(string $method, string $path, array $options = []): array
-    {
-        $method = strtoupper($method);
-        $routes = $this->routes[$method] ?? [];
-        if(!empty($this->routes['ANY'])){
-            $routes = array_merge($this->routes['ANY'], $routes);
+        if(!isset($this->current_route)){
+            $this->current_route = $this->resolve($this->current_method, $this->current_url);
         }
 
-        $patterns = $this->getPatterns();
+        $hasRoute = isset($this->current_route) && !empty($this->current_route);
 
-        foreach ($routes as $route => $value) {
-            $arguments = [];
-            if(isset($value['options']['domain']) && isset($options['domain'])){
-                $domain = preg_replace($patterns['keys'], $patterns['values'], $value['options']['domain']);
-                if(preg_match('#^' . $domain . '$#', $options['domain'], $params)){
-                    array_shift($params);
-                    $arguments = array_merge($arguments, $params);
-                    unset($params);
-                }else{
-                    continue;
-                }
-                $route = substr($route, strlen($value['options']['domain']));
+        if($hasRoute === FALSE){
+            $this->resolve = $this->response->withStatus(404);
+            if(empty($this->error_404['execute'])){
+                throw new PageNotFoundException('Error 404 : Page Not Found');
             }
-            if(isset($value['options']['port']) && isset($options['port'])){
-                if($value['options']['port'] !== $options['port']){
-                    continue;
-                }
-                $route = substr($route, (strlen((string)$value['options']['port']) + 1));
+            \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $this->error_404['options']['arguments']);
+            if(\is_callable($this->error_404['execute'])){
+                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
+                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
+                return $this->response = $this->execute($this->error_404['execute'], $this->error_404['options']['arguments']);
             }
-            if(isset($value['options']['ip']) && isset($options['ip'])){
-                if(in_array($options['ip'], $value['options']['ip']) === FALSE){
-                    continue;
-                }
-                $route = substr($route, (strlen(implode(',', $value['options']['ip'])) + 2));
-            }
-            $route = preg_replace($patterns['keys'], $patterns['values'], $route);
-            if(preg_match('#^' . $route . '$#', $path, $params)){
-                array_shift($params);
-                $this->hasRoute = true;
-                $value['arguments'] = array_merge($arguments, $params);
-                return $value;
-            }
+            $parse = $this->getControllerMethod($this->error_404['execute'], $this->error_404['options']);
+            $parse['controller'] = $this->controllerFind($parse['controller']);
+            $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
+            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
+            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+
+            return $this->response = $this->execute([$controller, $parse['method']], $this->error_404['options']['arguments']);
         }
 
-        if($this->hasRoute === FALSE && !isset($this->error404['execute'])){
-            throw new RouteNotFound('Page not found.');
-        }
-        return $this->error404;
-    }
-
-    protected function process(array $route): ResponseInterface
-    {
-        if(isset($route['options']['namespace'])){
-            $namespace = $route['options']['namespace'];
-            $this->configs['controller']['namespace'] .= $namespace;
-            $this->configs['controller']['path'] =
-                isset($this->configs['controller']['path']) ? rtrim($this->configs['controller']['path'], '\\/') : ''
-                    . DIRECTORY_SEPARATOR . $namespace;
-        }
-
-        $middleware = new MiddlewareEnforcer($this->configs['middleware']['path'], $this->configs['middleware']['namespace']);
+        $route = $this->current_route;
         $arguments = $route['arguments'] ?? [];
+        \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $arguments);
 
-        $both = $route['options']['middleware'] ?? [];
-        $before = $route['options']['before_middleware'] ?? [];
-        $after = $route['options']['after_middleware'] ?? [];
-        $middleware->add((empty($both) ? $before : array_merge($both, $before)), MiddlewareEnforcer::BEFORE);
-        $middleware->add((empty($both) ? $after : array_merge($both, $after)), MiddlewareEnforcer::AFTER);
-
-        static::$CArguments = $arguments;
-
-        if(is_callable($route['execute'])){
-            $this->response = $middleware->process($this->request, $this->response, $arguments, MiddlewareEnforcer::BEFORE);
-            $this->response = $this->execute($route['execute'], $arguments);
-            return $this->response = $middleware->process($this->request, $this->response, $arguments, MiddlewareEnforcer::AFTER);
+        $filters = [
+            'before'    => [],
+            'after'     => [],
+        ];
+        if(isset($route['options']['middleware']['before'])){
+            $filters['before'] = $route['options']['middleware']['before'];
+            unset($route['options']['middleware']['before']);
         }
-        $this->controllerMethodPrepare($route['execute']);
+        if(isset($route['options']['middleware']['after'])){
+            $filters['after'] = $route['options']['middleware']['after'];
+            unset($route['options']['middleware']['after']);
+        }
+        if(isset($route['options']['middleware']) && !empty($route['options']['middleware'])){
+            $filters['before'] = \array_merge($route['options']['middleware'], $filters['before']);
+            $filters['after'] = \array_merge($route['options']['middleware'], $filters['after']);
+            unset($route['options']['middleware']);
+        }
 
-        $controller = $this->getClassContainer(new \ReflectionClass(static::$CController));
+        $this->middleware_handle($filters['before'], $arguments, self::BEFORE);
 
-        $this->controllerMiddlewarePropertyPrepare($controller, static::$CMethod, $middleware, self::POSITION_BEFORE);
-        $this->response = $middleware->process($this->request, $this->response, $arguments, MiddlewareEnforcer::BEFORE);
-        $this->response = $this->execute([$controller, static::$CMethod], $arguments);
-        $this->controllerMiddlewarePropertyPrepare($controller, static::$CMethod, $middleware, self::POSITION_AFTER);
-        $this->response = $middleware->process($this->request, $this->response, $arguments, MiddlewareEnforcer::AFTER);
+        if(\is_callable($route['execute'])){
+            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
+            \define('INITPHP_ROUTER_CURRENT_METHOD', '');
+            $this->response = $this->execute($route['execute'], $arguments);
+        }else{
+            $parse = $this->getControllerMethod($route['execute'], $route['options']);
+            $parse['controller'] = $this->controllerFind($parse['controller']);
+            $reflection = new \ReflectionClass($parse['controller']);
+            $controller = $this->getClassContainer($reflection);
+            $this->middleware_handle($this->controller_middlewares_property($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
+            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
+            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+            $this->response = $this->execute([$controller, $parse['method']], $arguments);
+            $after_middleware = $this->controller_middlewares_property($controller, $parse['method'], self::AFTER);
+            if(!empty($after_middleware)){
+                $filters['after'] = \array_merge($filters['after'], $after_middleware);
+            }
+        }
+
+        $this->middleware_handle($filters['after'], $arguments, self::AFTER);
+
         return $this->response;
     }
 
-    protected function process404(array $route): ResponseInterface
+    /**
+     * @param string $method
+     * @param string $current_url
+     * @return array|null
+     */
+    public function resolve(string $method, string $current_url): ?array
     {
-        $this->response = $this->response->withStatus(404);
-        $arguments = $route['arguments'] ?? [];
-        static::$CArguments = $arguments;
-        if(is_callable($route['execute'])){
-            return $this->response = $this->execute($route['execute'], $arguments);
+        $this->current_url = $current_url;
+        $this->current_method = $method = \strtoupper($method);
+
+        $routes = \array_unique(\array_merge($this->methodIds['ANY'], $this->methodIds[$method]));
+        $patterns = $this->getPatterns();
+        $matches = [];
+        foreach ($routes as $id) {
+            $route = $this->routes[$id];
+            if(isset($route['options']['ip']) && !empty($route['options']['ip'])){
+                if(\is_array($route['options']['ip']) && !\in_array($this->current_ip, $route['options']['ip'], true)){
+                    continue;
+                }
+                if($route['options']['ip'] != $this->current_ip){
+                    continue;
+                }
+            }
+            $path = \preg_replace($patterns['keys'], $patterns['values'], $route['path']);
+            if(\preg_match('#^' . $path . '$#', $this->current_url, $arguments)){
+                \array_shift($arguments);
+                $route['arguments'] = $arguments;
+                $matches_size = \strlen($route['path']);
+                if(\is_array($arguments) && !empty($arguments)){
+                    $matches_size += (\count($arguments) * 25);
+                }
+                if(!isset($matches[$matches_size])){
+                    $matches[$matches_size] = [];
+                }
+                $matches[$matches_size][] = [
+                    'route'     => $route,
+                ];
+                continue;
+            }
         }
-        $this->controllerMethodPrepare($route['execute']);
-        $controller = new static::$CController();
-        return $this->response = $this->execute([$controller, static::$CMethod], $arguments);
+        if(!empty($matches)){
+            \krsort($matches);
+            $current_match = \current($matches);
+            return $this->current_route = $current_match[0]['route'];
+        }
+        return null;
+    }
+
+    private function controller_middlewares_property(object $controller, string $method, int $pos = self::BEFORE): array
+    {
+        if(!\property_exists($controller, 'middlewares')){
+            return [];
+        }
+        $reflection = new \ReflectionProperty($controller, 'middlewares');
+        if(!$reflection->isPublic()){
+            return [];
+        }
+        unset($reflection);
+        $middlewares = $controller->middlewares;
+        if(!\is_array($middlewares)){
+            return [];
+        }
+        $res = [];
+        if($pos === self::BEFORE){
+            if(isset($middlewares['after'])){
+                unset($middlewares['after']);
+            }
+            if(isset($middlewares['before'])){
+                if(!\is_array($middlewares['before'])){
+                    $middlewares['before'] = [$middlewares['before']];
+                }
+                $res = $middlewares['before'];
+            }
+        }else{
+            if(isset($middlewares['before'])){
+                unset($middlewares['before']);
+            }
+            if(isset($middlewares['after'])){
+                if(!\is_array($middlewares['after'])){
+                    $middlewares['after'] = [$middlewares['after']];
+                }
+                $res = $middlewares['after'];
+            }
+        }
+        $method_len = \strlen($method);
+        foreach ($middlewares as $key => $value) {
+            if(!\is_string($key)){
+                $res[] = $value;
+                continue;
+            }
+            if(!\is_array($value)){
+                continue;
+            }
+            if($key !== $method){
+                continue;
+            }
+            if(isset($value['before'])){
+                if($pos === self::BEFORE && \is_array($value['before'])){
+                    $res = \array_merge($res, $value['before']);
+                }
+                unset($value['before']);
+            }
+            if(isset($value['after'])){
+                if($pos === self::AFTER && \is_array($value['after'])){
+                    $res = \array_merge($res, $value['after']);
+                }
+                unset($value['after']);
+            }
+            if(empty($value) || !\is_array($value)){
+                continue;
+            }
+            foreach ($value as $row) {
+                $res[] = $row;
+            }
+        }
+        return $res;
+    }
+
+    private function middleware_class_find(string $class): string
+    {
+        if(!isset($this->current_route) || \class_exists($class)){
+            return $class;
+        }
+        $namespace = $this->current_route['namespaces']['middleware'];
+        $class_full_name = \rtrim($namespace, '\\') . '\\' . \ltrim($class, '\\');
+        if(\class_exists($class_full_name)){
+            return $class_full_name;
+        }
+        if(!empty($this->current_route['paths']['middleware'])){
+            $path = \rtrim($this->current_route['paths']['middleware'], '/\\') . \DIRECTORY_SEPARATOR . \ltrim($class, '\\/') . '.php';
+            if(\is_file($path)){
+                require $path;
+                if(\class_exists($class_full_name)){
+                    return $class_full_name;
+                }
+            }
+        }
+        throw new RouterException('"'.$class.'" filter/middleware class not found.');
+    }
+
+    private function middleware_handle(array $filters, $arguments, int $pos): void
+    {
+        if(empty($filters)){
+            return;
+        }
+        $run_filters = [];
+        foreach ($filters as $filter) {
+            if(is_callable($filter)){
+                $res = \call_user_func_array($filter, [$this->request, $this->response, $arguments]);
+            }else{
+                $filterClass = $this->middleware_class_find($filter);
+                if(\in_array($filterClass, $run_filters, true)) {
+                    continue;
+                }
+                $run_filters[] = $filterClass;
+                if(isset($this->filter_objects[$filterClass])){
+                    $filter = $this->filter_objects[$filterClass];
+                }else{
+                    $filter = $this->getClassContainer(new \ReflectionClass($filterClass));
+                    $this->filter_objects[$filterClass] = $filter;
+                }
+                $method = $pos == self::BEFORE ? 'before' : 'after';
+                $res = \call_user_func_array([$filter, $method], [$this->request, $this->response, $arguments]);
+            }
+            if($res instanceof ResponseInterface){
+                $this->response = $res;
+                continue;
+            }
+            if($res === null){
+                exit;
+            }
+            if(\is_object($filter)){
+                $filter = \get_class($filter) . '::' . ($pos == self::BEFORE ? 'before()' : 'after()');
+            }elseif(\is_callable($filter)){
+                $filter = '__CALLABLE__';
+            }else{
+                $filter = (string)$filter;
+            }
+            throw new RouterException('The "' . $filter . '" filter should return a \\Psr\\Http\\Message\\ResponseInterface or NULL.');
+        }
     }
 
     private function execute($execute, array $arguments): ResponseInterface
     {
         $reflection = is_array($execute) ? new \ReflectionMethod($execute[0], $execute[1]) : new \ReflectionFunction($execute);
-        ob_start();
+        ob_start(function ($tmp) {
+            $this->content .= $tmp;
+        });
         $res = call_user_func_array($execute, $this->resolveParameters($reflection, $arguments));
-        if(($content = ob_get_contents()) === FALSE){
-            $content = '';
-        }
         ob_end_clean();
         if($res instanceof ResponseInterface){
             $this->response = $res;
@@ -955,10 +927,12 @@ class Router
         }elseif($res instanceof StreamInterface) {
             $this->response = $this->response->withBody($res);
             $res = null;
+        }else{
+            $this->content .= (string)$res;
         }
-        $content .= (string)$res;
-        if(!empty($content) && $this->response->getBody()->isWritable()){
-            $this->response->getBody()->write($content);
+        if(!empty($this->content) && $this->response->getBody()->isWritable()){
+            $this->response->getBody()->write($this->content);
+            $this->content = '';
         }
         return $this->response;
     }
@@ -1013,8 +987,8 @@ class Router
         if($class->isInstance($this->response)){
             return $this->response;
         }
-        if(is_object($this->configs['container'])){
-            return $this->configs['container']->get($class->getName());
+        if(isset($this->container) && is_object($this->container)){
+            return $this->container->get($class->getName());
         }
         if(($constructor = $class->getConstructor()) === null){
             return $class->newInstance();
@@ -1041,49 +1015,72 @@ class Router
                 $arguments[] = null;
                 continue;
             }
-            throw new ClassContainerException('Unable to resolve parameter "'.$parameter->getName().'" of class "'.$class->getName().'".');
+            throw new RouterException('Unable to resolve parameter "'.$parameter->getName().'" of class "'.$class->getName().'".');
         }
         return $class->newInstanceArgs($arguments);
     }
 
-    private function variantRoutePath(string $path): array
+    private function controllerFind($class): string
     {
-        $path = ($this->prefix ?? '') . $path;
-        if(strpos($path, '?') === FALSE){
-            return [$path];
+        if(\class_exists($class) || \is_object($class)){
+            return $class;
         }
-        $variants = [];
-        $parse = explode('?', $path);
-        $tmp = '';
-        foreach ($parse as $optional) {
-            $tmp .= $optional;
-            $variants[] = $tmp;
-        }
-        return array_reverse($variants);
-    }
 
-    private function currentMethod(): string
-    {
-        if($this->configs['variableMethod'] !== FALSE && isset($_REQUEST['_method'])){
-            $_method = strtoupper($_REQUEST['_method']);
-            if(in_array($_method, self::SUPPORTED_METHODS, true)){
-                return $_method;
+        if(empty($this->configs['namespaces']['controller'])){
+            throw new RouterException('"' . $class . '" controller not found.');
+        }
+        $controller = \rtrim($this->configs['namespaces']['controller'], '\\') . '\\' . \ltrim($class);
+        if(\class_exists($controller)){
+            return $controller;
+        }
+        if(!empty($this->configs['paths']['controller'])){
+            $path = \rtrim($this->configs['paths']['controller'], '\\/') . \DIRECTORY_SEPARATOR . $class . '.php';
+            if(\is_file($path)){
+                require $path;
+                if(\class_exists($controller)){
+                    return $controller;
+                }
             }
         }
-        $xWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
-        $isAjax = (strtolower($xWith) === 'xmlhttprequest');
-        return ($isAjax ? 'X':'')
-            . strtoupper($this->request->getMethod());
+        throw new RouterException('"' . $controller . '" controller not found.');
     }
 
-    private function requestPort(): int
+    private function getControllerMethod($execute, array $route_options = []): array
     {
-        $uri = $this->request->getUri();
-        $port = $uri->getPort();
-        if(empty($port)){
-            return $uri->getScheme() === 'https' ? 443 : 80;
+        if(is_array($execute)){
+            if(array_diff_key($execute, array_keys($execute))){
+                $parse = [
+                    'controller'    => key($execute),
+                    'method'        => current($execute),
+                ];
+            }else{
+                $parse = [
+                    'controller'        => $execute[0],
+                    'method'            => $execute[1],
+                ];
+            }
+            return $parse;
         }
-        return $port;
+
+        if(\is_string($execute)){
+            $split = false;
+            foreach (['::', '@', '->'] as $separator) {
+                if(\strpos($execute, $separator) === FALSE){
+                    continue;
+                }
+                $split = \explode($separator, $execute, 2);
+                break;
+            }
+            if($split === FALSE){
+                throw new RouterException('The requested controller and method are not understood.');
+            }
+            return [
+                'controller'    => $split[0],
+                'method'        => $split[1]
+            ];
+        }
+
+        throw new RouterException('The requested controller and method are not understood.');
     }
 
     private function getPatterns(): array
@@ -1098,138 +1095,171 @@ class Router
         return $res;
     }
 
-    private function controllerFind(string $class): string
+    private function options_merge(array $array, array ...$arrays): array
     {
-        if(class_exists($class)){
-            return $class;
+        $data = \array_merge_recursive($array, ...$arrays);
+        if(isset($data['as']) && \is_array($data['as'])){
+            $data['as'] = \implode('', $data['as']);
         }
-        $tmpClass = $class;
-        if($this->configs['controller']['namespace'] !== null){
-            $namespace = rtrim($this->configs['controller']['namespace'], '\\');
-            $class = $namespace . '\\' . $class;
-            if(class_exists($class)){
-                return $class;
+        if(isset($data['prefix']) && \is_array($data['prefix'])){
+            $data['prefix'] = \implode('', $data['prefix']);
+        }
+        if(isset($data['base_path'])){
+            if(\is_array($data['base_path'])){
+                $data['base_path'] = \str_replace('//', '/', \trim(\implode('', $data['base_path']), '/'));
+            }
+            if($data['base_path'] == '/'){
+                unset($data['base_path']);
             }
         }
-        if($this->configs['controller']['path'] !== null){
-            $path = rtrim($this->configs['controller']['path'], '\\/') . DIRECTORY_SEPARATOR . $tmpClass . '.php';
-            if(is_file($path)){
-                require_once $path;
+        if(isset($data['variable_method'])){
+            unset($data['variable_method']);
+        }
+        if(isset($data['namespaces'])){
+            if(isset($data['namespaces']['controller']) && \is_array($data['namespaces']['controller'])){
+                $data['namespaces']['controller'] = \str_replace('\\\\', '\\', \implode('\\', $data['namespaces']['controller']));
             }
-            if(class_exists($class)){
-                return $class;
+            if(isset($data['namespaces']['middleware']) && \is_array($data['namespaces']['middleware'])){
+                $data['namespaces']['middleware'] = \str_replace('\\\\', '\\', \implode('\\', $data['namespaces']['middleware']));
             }
         }
-        throw new ControllerException('"' . $tmpClass . '" controller not found.');
+        if(isset($data['paths'])){
+            if(isset($data['paths']['controller']) && \is_array($data['paths']['controller'])){
+                $data['paths']['controller'] = \str_replace('\\\\', '\\', \implode('\\', $data['paths']['controller']));
+            }
+            if(isset($data['paths']['middleware']) && \is_array($data['paths']['middleware'])){
+                $data['paths']['middleware'] = \str_replace('\\\\', '\\', \implode('\\', $data['paths']['middleware']));
+            }
+        }
+        return $data;
     }
 
-    private function whichControllerMethod($which): array
+    private function register_methods_check($methods): array
     {
-        if(is_array($which)){
-            if(array_diff_key($which, array_keys($which))){
-                return [
-                    'controller'    => key($which),
-                    'method'        => current($which),
-                ];
+        if(\is_array($methods)){
+            foreach ($methods as $method) {
+                if(!\in_array($method, self::SUPPORTED_METHODS)){
+                    throw new InvalidArgumentException('The "' . (string)$method . '" method is not supported. Supported methods are: ' . \implode(', ', self::SUPPORTED_METHODS));
+                }
             }
-            return [
-                'controller'        => $which[0],
-                'method'            => $which[1],
-            ];
+            return $methods;
         }
-        if(!is_string($which)){
-            throw new ControllerException('The requested controller and method are not understood.');
-        }
-        foreach ($this->separator as $separator) {
-            if(strpos($which, $separator) === FALSE){
-                continue;
-            }
-            [$controller, $method] = explode($separator, $which, 2);
-            return [
-                'controller'    => $controller,
-                'method'        => $method,
-            ];
-        }
-        throw new ControllerException('The requested controller and method are not understood.');
+        return $this->register_methods_check(\explode('|', \strtoupper($methods)));
     }
 
-    private function controllerMiddlewarePropertyPrepare(object $controller, string $method, MiddlewareEnforcer &$enforcer, int $pos = self::POSITION_BEFORE): void
+    private function method_route_register(int $id, array $methods)
     {
-        if(property_exists($controller, 'middlewares') === FALSE){
+        foreach ($methods as $method) {
+            $this->methodIds[$method][] = $id;
+        }
+    }
+
+    private function current_ip_boot(): void
+    {
+        if(($ip = \getenv('HTTP_CLIENT_IP')) !== FALSE){
+            $this->current_ip = $ip;
             return;
         }
-        $middleware = $controller->middlewares;
-        $posId = $pos === self::POSITION_AFTER ? 'after' : 'before';
-
-        $bothMiddleware = $middleware['both'] ?? [];
-        $posMiddleware = $middleware[$posId] ?? [];
-
-        if(isset($middleware[$method])){
-            $methodMiddleware = $middleware[$method];
-            if(isset($methodMiddleware['both']) && is_array($methodMiddleware['both'])){
-                $both = array_merge($bothMiddleware, $methodMiddleware['both']);
+        if(($ip = \getenv('HTTP_X_FORWARDED_FOR')) !== FALSE){
+            if(\strstr($ip, ',')){
+                $parse = \explode(',', $ip, 2);
+                $ip = \trim($parse[0]);
             }
-            if(isset($methodMiddleware[$posId]) && is_array($methodMiddleware[$posId])){
-                $posMiddleware = array_merge($posMiddleware, $methodMiddleware[$posId]);
-            }
+            $this->current_ip = $ip;
+            return;
         }
-        $enforcer->add(
-            (empty($bothMiddleware) ? $posMiddleware : array_merge($bothMiddleware, $posMiddleware)),
-            ($pos === self::POSITION_BEFORE ? MiddlewareEnforcer::BEFORE : MiddlewareEnforcer::AFTER)
-        );
+        $this->current_ip = ($_SERVER['REMOTE_ADDR'] ?? null);
     }
 
-    private function controllerMethodPrepare($execute)
+    private function current_method_boot(): void
     {
-        $parse = $this->whichControllerMethod($execute);
-        $controller = $this->controllerFind($parse['controller']);
-        $method = $parse['method'];
-        if(method_exists($controller, $method) === FALSE){
-            throw new RouteNotFound('Method "' . $method . '" not found in "' . $controller . '"');
+        $this->current_method = \strtoupper($this->request->getMethod());
+        if($this->configs['variable_method'] === FALSE || !isset($_REQUEST['_method'])){
+            return;
         }
-        static::$CController = $controller;
-        static::$CMethod = $method;
+        $method = \strtoupper($_REQUEST['_method']);
+        if(!\in_array($method, self::SUPPORTED_METHODS, true)){
+            return;
+        }
+        $this->current_method = $method;
     }
 
-    private function confirmIPAddresses($ip): array
+    protected function cache_start()
     {
-        if(is_string($ip)){
+        if(!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === FALSE){
+            return;
+        }
+        if(!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])){
+            return;
+        }
+        if(!\is_file($this->cache_configs['path'])){
+            return;
+        }
+        if(($read = @\file_get_contents($this->cache_configs['path'])) === FALSE){
+            throw new \Exception('Cannot read router cache file (' . $this->configs['cache']['path'] . ')');
+        }
+        $ttl = (int)($this->cache_configs['ttl'] ?? 86400);
+        $data = \unserialize($read);
+        if(!isset($data['created_at'])){
+            return;
+        }
+        if(($data['created_at'] + $ttl) < \time()){
+            return;
+        }
+        if(!isset($data['data'])){
+            return;
+        }
+        $data = $data['data'];
+        $this->routes = $data['routes'];
+        $this->names = $data['names'];
+        $this->methodIds = $data['methodIds'];
+        $this->id = $data['id'];
+        $this->error_404 = $data['error_404'];
+        $this->cache_status = true;
+    }
+
+    protected function cache_stop()
+    {
+        if(!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === FALSE){
+            return;
+        }
+        if(!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])){
+            return;
+        }
+        if($this->cache_status !== FALSE){
+            return;
+        }
+        $data = [
+            'created_at'    => \time(),
+            'data'          => [
+                'id'        => $this->id,
+                'routes'    => $this->routes,
+                'names'     => $this->names,
+                'methodIds' => $this->methodIds,
+                'error_404' => $this->error_404,
+            ]
+        ];
+        if(@\file_put_contents($this->cache_configs['path'], \serialize($data)) === FALSE){
+            throw new \Exception('Failed to create router cache file (' . $this->cache_configs['path'] . ').');
+        }
+    }
+
+    private function confirm_ip_addresses($ip): array
+    {
+        if(\is_string($ip)){
             $ip = [$ip];
         }
-        if(!is_array($ip)){
+        if(!\is_array($ip)){
             throw new InvalidArgumentException('It can be just an IP address or a string of IP addresses.');
         }
         $res = [];
         foreach ($ip as $row) {
-            if(filter_var($row, FILTER_VALIDATE_IP) === FALSE){
+            if(\filter_var($row, \FILTER_VALIDATE_IP) === FALSE){
                 throw new InvalidArgumentException('It can be just an IP address or a string of IP addresses.');
             }
             $res[] = $row;
         }
         return $res;
-    }
-
-    private function groupOptionsSetter(array $options = []): void
-    {
-        $this->groupOptionsSync();
-        foreach ($options as $key => $value) {
-            $this->groupOptions[$key] = ($this->groupOptions[$key] ?? '') . $value;
-        }
-    }
-
-    private function groupOptionsSync(): void
-    {
-        $this->groupOptionsOrigins[] = $this->groupOptions;
-    }
-
-    private function groupOptionsReverseSync(): void
-    {
-        if(empty($this->groupOptionsOrigins)){
-            $this->groupOptions = [];
-            return;
-        }
-        $this->groupOptions = end($this->groupOptionsOrigins);
-        array_pop($this->groupOptionsOrigins);
     }
 
 }

@@ -1,23 +1,55 @@
 <?php
+/**
+ * RouterTest.php
+ *
+ * This file is part of Router.
+ *
+ * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
+ * @copyright  Copyright © 2022 Muhammet ŞAFAK
+ * @license    ./LICENSE  MIT
+ * @version    1.0
+ * @link       https://www.muhammetsafak.com.tr
+ */
+
 declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use \InitPHP\Router\Exception\{RouteNotFound, UnsupportedMethod};
-use \InitPHP\HTTP\{Request, Response, Stream};
-use \InitPHP\Router\Router;
-use \PHPUnit\Framework\TestCase;
-use \Psr\Http\Message\{RequestInterface, ResponseInterface};
+use InitPHP\HTTP\Request;
+use InitPHP\HTTP\Response;
+use InitPHP\HTTP\Stream;
+use InitPHP\Router\Exception\InvalidArgumentException;
+use InitPHP\Router\Exception\PageNotFoundException;
+use InitPHP\Router\Router;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
-class RouterTest extends TestCase
+class RouterTest extends \PHPUnit\Framework\TestCase
 {
-    protected RequestInterface $request;
-    protected ResponseInterface $response;
-    protected Router $router;
+
+    /** @var RequestInterface */
+    protected $request;
+
+    /** @var ResponseInterface */
+    protected $response;
+
+    /** @var Router */
+    protected $router;
+
+    private $options = [
+        'paths'         => [
+            'controller'    => null,
+            'middleware'    => null,
+        ],
+        'namespaces'    => [
+            'controller'    => null,
+            'middleware'    => null,
+        ],
+    ];
 
     protected function setUp(): void
     {
-        $this->request = new Request('GET', '/', [], null, '1.1');
+        $this->request = new Request('GET', 'http://www.example.com/', [], null, '1.1');
         $stream = new Stream('', null);
         $this->response = new Response(200, [], $stream, '1.1');
 
@@ -30,14 +62,14 @@ class RouterTest extends TestCase
         $this->router->register('GET', '/', ['Home', 'index']);
 
         $expected = [
-            '/' => [
+            'http://www.example.com/' => [
                 'execute'   => ['Home', 'index'],
-                'options'   => []
+                'options'   => $this->options,
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes('get'));
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterMultipleRoutesWithAString()
@@ -46,22 +78,22 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => []
+                    'options'   => $this->options,
                 ]
             ],
             'POST'  => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => []
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterMultipleRoutesWithAArray()
@@ -70,22 +102,22 @@ class RouterTest extends TestCase
 
         $expected = [
             'POST'  => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
             'GET'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAGetRoute()
@@ -94,16 +126,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAPostRoute()
@@ -112,16 +144,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'POST'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAPutRoute()
@@ -130,16 +162,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'PUT'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterADeleteRoute()
@@ -148,16 +180,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'DELETE'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAOptionsRoute()
@@ -166,16 +198,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'OPTIONS'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAPatchRoute()
@@ -184,16 +216,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'PATCH'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAHeadRoute()
@@ -202,142 +234,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'HEAD'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxGetRoute()
-    {
-        $this->router->xget('/', ['Home', 'index']);
-
-        $expected = [
-            'XGET'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxPostRoute()
-    {
-        $this->router->xpost('/', ['Home', 'index']);
-
-        $expected = [
-            'XPOST'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxPutRoute()
-    {
-        $this->router->xput('/', ['Home', 'index']);
-
-        $expected = [
-            'XPUT'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxDeleteRoute()
-    {
-        $this->router->xdelete('/', ['Home', 'index']);
-
-        $expected = [
-            'XDELETE'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxOptionsRoute()
-    {
-        $this->router->xoptions('/', ['Home', 'index']);
-
-        $expected = [
-            'XOPTIONS'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxPatchRoute()
-    {
-        $this->router->xpatch('/', ['Home', 'index']);
-
-        $expected = [
-            'XPATCH'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
-    }
-
-    public function testRegisterAAjaxHeadRoute()
-    {
-        $this->router->xhead('/', ['Home', 'index']);
-
-        $expected = [
-            'XHEAD'   => [
-                '/' => [
-                    'execute'   => ['Home', 'index'],
-                    'options'   => [],
-                ]
-            ],
-        ];
-
-        $this->assertEquals($expected, $this->router->getRoutes(null));
-
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAAnyRoute()
@@ -346,16 +252,16 @@ class RouterTest extends TestCase
 
         $expected = [
             'ANY'   => [
-                '/' => [
+                'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterGroupRoute()
@@ -367,20 +273,20 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/admin/'   => [
+                'http://www.example.com/admin/'   => [
                     'execute'   => ['Admin', 'dashboard'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ],
-                '/admin/login'   => [
+                'http://www.example.com/admin/login'   => [
                     'execute'   => ['Admin', 'login'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterNestedGroupRoute()
@@ -397,36 +303,36 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/admin/'   => [
+                'http://www.example.com/admin/'   => [
                     'execute'   => ['Admin', 'dashboard'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ],
-                '/admin/login'   => [
+                'http://www.example.com/admin/login'   => [
                     'execute'   => ['Admin', 'login'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ],
-                '/admin/posts/list' => [
+                'http://www.example.com/admin/posts/list' => [
                     'execute'   => ['AdminPost', 'list'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin/posts']),
                 ],
             ],
             'POST'  => [
-                '/admin/posts/add' => [
+                'http://www.example.com/admin/posts/add' => [
                     'execute'   => ['AdminPost', 'add'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin/posts']),
                 ]
             ],
             'DELETE'    => [
-                '/admin/posts/delete/{id}' => [
+                'http://www.example.com/admin/posts/delete/{id}' => [
                     'execute'   => ['AdminPost', 'delete'],
-                    'options'   => [],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin/posts']),
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterADomainGroupRoute()
@@ -447,50 +353,40 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/'   => [
+                'http://www.example.com/'   => [
                     'execute'   => ['Main', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ],
-                '{slug}.example.com/'   => [
+                'http://{slug}.example.com/'   => [
                     'execute'   => ['Subdomain', 'index'],
-                    'options'   => [
-                        'domain'    => '{slug}.example.com'
-                    ],
+                    'options'   => $this->options,
                 ],
-                '{slug}.example.com/about'   => [
+                'http://{slug}.example.com/about'   => [
                     'execute'   => ['Subdomain', 'about'],
-                    'options'   => [
-                        'domain'    => '{slug}.example.com'
-                    ],
+                    'options'   => $this->options,
                 ],
-                '{slug}.example.com/admin/'   => [
+                'http://{slug}.example.com/admin/'   => [
                     'execute'   => ['SubdomainAdmin', 'dashboard'],
-                    'options'   => [
-                        'domain'    => '{slug}.example.com'
-                    ],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ],
-                '{slug}.example.com/admin/login'   => [
+                'http://{slug}.example.com/admin/login'   => [
                     'execute'   => ['SubdomainAdmin', 'login'],
-                    'options'   => [
-                        'domain'    => '{slug}.example.com'
-                    ],
+                    'options'   => \array_merge($this->options, ['prefix' => '/admin']),
                 ],
-                '{slug}.example.com/contact'   => [
+                'http://{slug}.example.com/contact'   => [
                     'execute'   => ['Subdomain', 'contact'],
-                    'options'   => [
-                        'domain'    => '{slug}.example.com'
-                    ],
+                    'options'   => $this->options,
                 ],
-                '/about'   => [
+                'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
 
@@ -511,46 +407,38 @@ class RouterTest extends TestCase
 
         $expected = [
             'GET'   => [
-                '/'   => [
+                'http://www.example.com/'   => [
                     'execute'   => ['Main', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ],
-                ':9000/'   => [
+                'http://www.example.com:9000/'   => [
                     'execute'   => ['Api', 'main'],
-                    'options'   => [
-                        'port'  => 9000,
-                    ],
+                    'options'   => $this->options,
                 ],
-                ':9000/user/'   => [
+                'http://www.example.com:9000/user/'   => [
                     'execute'   => ['Api', 'user'],
-                    'options'   => [
-                        'port'  => 9000,
-                    ],
+                    'options'   => \array_merge($this->options, ['prefix' => '/user']),
                 ],
-                ':9000/random'   => [
+                'http://www.example.com:9000/random'   => [
                     'execute'   => ['Api', 'random'],
-                    'options'   => [
-                        'port'  => 9000,
-                    ],
+                    'options'   => $this->options,
                 ],
-                '/about'   => [
+                'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ],
             'POST'  => [
-                ':9000/user/add'    => [
+                'http://www.example.com:9000/user/add'    => [
                     'execute'   => ['Api', 'add'],
-                    'options'   => [
-                        'port'  => 9000
-                    ]
+                    'options'   => \array_merge($this->options, ['prefix' => '/user']),
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testRegisterAIPGroupRoute()
@@ -568,57 +456,51 @@ class RouterTest extends TestCase
 
         $this->router->get('/about', ['Main', 'about']);
 
+        $options = \array_merge($this->options, ['ip'    => ['192.168.1.10', '192.168.1.11']]);
+
         $expected = [
             'GET'   => [
-                '/'   => [
+                'http://www.example.com/'   => [
                     'execute'   => ['Main', 'index'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ],
-                '[192.168.1.10,192.168.1.11]/admin/'   => [
+                'http://www.example.com/admin/'   => [
                     'execute'   => ['Admin', 'dashboard'],
-                    'options'   => [
-                        'ip'    => ['192.168.1.10', '192.168.1.11']
-                    ],
+                    'options'   => \array_merge($options, ['prefix' => '/admin']),
                 ],
-                '[192.168.1.10,192.168.1.11]/admin/profile'   => [
+                'http://www.example.com/admin/profile'   => [
                     'execute'   => ['Admin', 'profile'],
-                    'options'   => [
-                        'ip'    => ['192.168.1.10', '192.168.1.11']
-                    ],
+                    'options'   => \array_merge($options, ['prefix' => '/admin']),
                 ],
-                '[192.168.1.10,192.168.1.11]/logout'   => [
+                'http://www.example.com/logout'   => [
                     'execute'   => ['Admin', 'logout'],
-                    'options'   => [
-                        'ip'    => ['192.168.1.10', '192.168.1.11']
-                    ],
+                    'options'   => $options,
                 ],
-                '[192.168.1.10,192.168.1.11]/login'   => [
+                'http://www.example.com/login'   => [
                     'execute'   => ['Admin', 'login'],
-                    'options'   => [
-                        'ip'    => ['192.168.1.10', '192.168.1.11']
-                    ],
+                    'options'   => $options,
                 ],
-                '/about'   => [
+                'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
-                    'options'   => [],
+                    'options'   => $this->options,
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testThrowsRegisterARouteNotSupportedMethod()
     {
-        $this->expectException(UnsupportedMethod::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->router->register('ABC', '/', ['Home', 'index']);
     }
 
     public function testThrowsRegisterARouteNotSupportedExecute()
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->router->register('GET', '/', true);
     }
 
@@ -633,35 +515,40 @@ class RouterTest extends TestCase
         $this->router->get('/', ['Main', 'index']);
         $this->router->post('/about', ['Main', 'about']);
 
-        $this->expectException(RouteNotFound::class);
-        $this->router->resolve($method, $uri);
 
-        $this->router->routesReset();
+        $this->router->resolve($method, $uri);
+        $this->expectException(PageNotFoundException::class);
+        $this->router->dispatch();
+
+        $this->router->destroy();
     }
 
     public function routerDispatchArguments()
     {
         return [
-            ['/', 'post'],
-            ['/about', 'get'],
-            ['/contact', 'delete']
+            ['http://www.example.com/', 'post'],
+            ['http://www.example.com/about', 'get'],
+            ['http://www.example.com/contact', 'delete']
         ];
     }
 
     public function testRouteResolve()
     {
         $this->router->get('/', ['Home', 'index']);
-        $this->router->get('/about', ['Home', 'about']);
         $this->router->get('/contact', ['Home', 'contact']);
+        $this->router->get('/about', ['Home', 'about']);
 
         $expected = [
+            'id'        => 3,
+            'methods'   => ['GET'],
+            'path'      => 'http://www.example.com/about',
             'execute'   => ['Home', 'about'],
-            'options'   => [],
+            'options'   => $this->options,
             'arguments' => [],
         ];
 
-        $this->assertEquals($expected, $this->router->resolve('get', '/about'));
-        $this->router->routesReset();
+        $this->assertEquals($expected, $this->router->resolve('GET', 'http://www.example.com/about'));
+        $this->router->destroy();
     }
 
     public function testRoutePatternResolve()
@@ -670,16 +557,18 @@ class RouterTest extends TestCase
         $this->router->get('/user/{string}/{id}', ['User', 'profile']);
 
         $expected = [
+            'id'        => 2,
+            'methods'   => ['GET'],
+            'path'      => 'http://www.example.com/user/{string}/{id}',
             'execute'   => ['User', 'profile'],
-            'options'   => [],
+            'options'   => $this->options,
             'arguments' => [
                 'muhametsafak',
                 12
             ],
         ];
 
-        $this->assertEquals($expected, $this->router->resolve('get', '/user/muhametsafak/12'));
-        $this->router->routesReset();
+        $this->assertEquals($expected, $this->router->resolve('GET', 'http://www.example.com/user/muhametsafak/12'));
+        $this->router->destroy();
     }
-
 }

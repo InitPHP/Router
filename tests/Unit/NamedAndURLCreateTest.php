@@ -1,18 +1,34 @@
 <?php
+/**
+ * NamedAndURLCreateTest.php
+ *
+ * This file is part of Router.
+ *
+ * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
+ * @copyright  Copyright © 2022 Muhammet ŞAFAK
+ * @license    ./LICENSE  MIT
+ * @version    1.0
+ * @link       https://www.muhammetsafak.com.tr
+ */
+
 declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
 use \InitPHP\HTTP\{Request, Response, Stream};
-use \InitPHP\Router\Router;
-use \PHPUnit\Framework\TestCase;
+use InitPHP\Router\Router;
 use \Psr\Http\Message\{RequestInterface, ResponseInterface};
 
-class NamedAndURLCreateTest extends TestCase
+class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
 {
-    protected RequestInterface $request;
-    protected ResponseInterface $response;
-    protected Router $router;
+    /** @var RequestInterface */
+    protected $request;
+
+    /** @var ResponseInterface */
+    protected $response;
+
+    /** @var Router */
+    protected $router;
 
     protected function setUp(): void
     {
@@ -22,7 +38,9 @@ class NamedAndURLCreateTest extends TestCase
 
         $this->router = new Router($this->request, $this->response);
         parent::setUp();
+        parent::setUp();
     }
+
 
     public function testGeneratingUrlFromNamedRoutes()
     {
@@ -30,7 +48,7 @@ class NamedAndURLCreateTest extends TestCase
 
         $this->assertEquals('http://localhost/home', $this->router->route('homeIndex'));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testGeneratingUrlFromNamedParameterRouters()
@@ -42,7 +60,7 @@ class NamedAndURLCreateTest extends TestCase
             'slug'  => 'admin'
         ]));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testGeneratingUrlFromNamedRouterGroup()
@@ -54,7 +72,7 @@ class NamedAndURLCreateTest extends TestCase
 
         $this->assertEquals('http://localhost/admin/login', $this->router->route('admin.login'));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testGeneratingUrlFromNamedRouterDomainGroup()
@@ -67,7 +85,7 @@ class NamedAndURLCreateTest extends TestCase
             'username'  => 'admin'
         ]));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testGeneratingUrlFromNamedRouterIPGroup()
@@ -78,7 +96,7 @@ class NamedAndURLCreateTest extends TestCase
 
         $this->assertEquals('http://localhost/admin', $this->router->route('local.admin'));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
 
     public function testGeneratingUrlFromNamedRouterPortGroup()
@@ -89,7 +107,6 @@ class NamedAndURLCreateTest extends TestCase
 
         $this->assertEquals('http://localhost:8080/admin/index', $this->router->route('admin.dashboard'));
 
-        $this->router->routesReset();
+        $this->router->destroy();
     }
-
 }
