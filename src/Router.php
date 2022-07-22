@@ -224,6 +224,7 @@ class Router
         $path = (isset($options['base_path']) && $options['base_path'] != '/' ? \rtrim($options['base_path'], '/') . '/' : '')
             . ($options['prefix'] ?? '')
             . $path;
+        $path = \str_replace(['//', '///'], '/', $path);
 
         $uri = clone $this->uri;
         $uri->withPath($path);
