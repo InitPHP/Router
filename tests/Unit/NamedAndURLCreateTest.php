@@ -109,4 +109,14 @@ class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
 
         $this->router->destroy();
     }
+
+    public function testOptionalUrlParam()
+    {
+        $this->router->get('/admin/{slug}?', 'AdminController@index')->name('admin');
+
+        $this->assertEquals('http://localhost/admin/', $this->router->route('admin'));
+        $this->assertEquals('http://localhost/admin/dashboard', $this->router->route('admin', ['slug' => 'dashboard']));
+        $this->router->destroy();
+    }
+
 }

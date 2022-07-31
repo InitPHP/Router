@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1
+ * @version    1.1.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -544,21 +544,33 @@ class Router
         }
         $id = $this->names[$name];
         $path = $this->routes[$id]['path'];
-        if(empty($arguments)){
-            return $path;
-        }
-        $replace = [];
-        foreach ($arguments as $key => $value) {
-            $key = \trim($key, ':{} ');
-            if(\is_object($value) && \method_exists($value, '__toString')){
-                $value = $value->__toString();
-            }else{
-                $value = (string)$value;
+        if(!empty($arguments)){
+            $replace = [];
+            foreach ($arguments as $key => $value) {
+                $key = \trim($key, ':{} ');
+                if(\is_object($value) && \method_exists($value, '__toString')){
+                    $value = $value->__toString();
+                }else{
+                    $value = (string)$value;
+                }
+                $replace['{'.$key.'}'] = $value;
+                $replace[':'.$key] = $value;
+                $replace['{'.$key.'}?'] = $value;
+                $replace[':'.$key.'?'] = $value;
             }
-            $replace['{'.$key.'}'] = $value;
-            $replace[':'.$key] = $value;
+            $url = \strtr($path, $replace);
+        }else{
+            $url = $path;
         }
-        return \strtr($path, $replace);
+        if(\strpos($url, '?') === FALSE){
+            return $url;
+        }
+        $url = \preg_replace('/({[\w\-_]+}\?|:[\w\-_]+\?)/', '?', $url);
+        $url = \str_replace('?', '', $url);
+        if(\rtrim($url, '/') != $url){
+            $url = \rtrim($url, '/') . '/';
+        }
+        return $url;
     }
 
     /**
