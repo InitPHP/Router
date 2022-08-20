@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.1
+ * @version    1.1.2
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -719,6 +719,10 @@ class Router
         }
 
         $this->middleware_handle($filters['before'], $arguments, self::BEFORE);
+        $responseStatusCode = (int)$this->response->getStatusCode();
+        if($responseStatusCode < 200 || $responseStatusCode > 299){
+            return $this->response;
+        }
 
         if(\is_callable($route['execute'])){
             \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
@@ -732,6 +736,10 @@ class Router
             $this->middleware_handle($this->controller_middlewares_property($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
             \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
             \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+            $responseStatusCode = (int)$this->response->getStatusCode();
+            if($responseStatusCode < 200 || $responseStatusCode > 299){
+                return $this->response;
+            }
             $this->response = $this->execute([$controller, $parse['method']], $arguments);
             $after_middleware = $this->controller_middlewares_property($controller, $parse['method'], self::AFTER);
             if(!empty($after_middleware)){
@@ -910,6 +918,10 @@ class Router
             }
             if($res instanceof ResponseInterface){
                 $this->response = $res;
+                $statusCode = (int)$res->getStatusCode();
+                if($statusCode < 200 || $statusCode > 299){
+                    break;
+                }
                 continue;
             }
             if($res === null){
