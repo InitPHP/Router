@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.2
+ * @version    1.1.3
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -875,13 +875,13 @@ class Router
         if(!isset($this->current_route) || \class_exists($class)){
             return $class;
         }
-        $namespace = $this->current_route['namespaces']['middleware'];
+        $namespace = $this->current_route['options']['namespaces']['middleware'];
         $class_full_name = \rtrim($namespace, '\\') . '\\' . \ltrim($class, '\\');
         if(\class_exists($class_full_name)){
             return $class_full_name;
         }
-        if(!empty($this->current_route['paths']['middleware'])){
-            $path = \rtrim($this->current_route['paths']['middleware'], '/\\') . \DIRECTORY_SEPARATOR . \ltrim($class, '\\/') . '.php';
+        if(!empty($this->current_route['options']['paths']['middleware'])){
+            $path = \rtrim($this->current_route['options']['paths']['middleware'], '/\\') . \DIRECTORY_SEPARATOR . \ltrim($class, '\\/') . '.php';
             if(\is_file($path)){
                 require $path;
                 if(\class_exists($class_full_name)){
