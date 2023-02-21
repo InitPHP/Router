@@ -28,6 +28,6 @@
     },
     "require-dev": {
         "phpunit/phpunit": "9.5",
-        "initphp/http": "~1.0"
+        "initphp/http": "^1.0"
     }
 }

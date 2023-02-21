@@ -20,6 +20,7 @@ This is an open source library that lets you create and manage advanced routes f
 - Ability to call a class in (Symfony-like) callable functions or parameters of controller methods.
 - Routing by request ports.
 - Routing by client IP address (Via `$_SERVER['REMOTE_ADDR']`. Locally, this value can be something like `::1` or `127.0.0.1`.)
+- A directory path can be defined as a virtual link.
 
 ## Requirements
 

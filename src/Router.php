@@ -25,9 +25,13 @@ class Router
     public const BEFORE = -1; // before
     public const AFTER = 1; // after
 
+    public const ROUTE = 0;
+
+    public const LINK = 1;
+
     public const SUPPORTED_METHODS = [
         'GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS',
-        'ANY',
+        'ANY', 'LINK'
     ];
 
     /** @var array  */
@@ -77,6 +81,8 @@ class Router
         '{date[0-9]?}'      => '([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1]))',
         ':locale'           => '([A-Za-z]{2}|[A-Za-z]{2}[\_\-]{1}[A-Za-z]{2})',
         '{locale}'          => '([A-Za-z]{2}|[A-Za-z]{2}[\_\-]{1}[A-Za-z]{2})',
+        ':everything'       => '(.*)',
+        '{everything}'      => '(.*)',
     ];
 
     /** @var RequestInterface */
@@ -90,6 +96,7 @@ class Router
 
     protected $container;
 
+    /** @var int */
     protected $id = 0;
 
     /** @var array */
@@ -266,6 +273,19 @@ class Router
         $this->method_route_register($this->id, $methods);
 
         return $this;
+    }
+
+
+    public function link(string $link, string $source, array $options = []): self
+    {
+        if (!\file_exists($source)) {
+            throw new InvalidArgumentException("\$source can be directory or file.");
+        }
+        if (\is_dir($source)) {
+            $link = \rtrim($link, '/') . '/(.*)';
+        }
+
+        return $this->register(['LINK'], $link, $source, $options);
     }
 
     /**
@@ -677,23 +697,7 @@ class Router
         $hasRoute = isset($this->current_route) && !empty($this->current_route);
 
         if($hasRoute === FALSE){
-            $this->response = $this->response->withStatus(404);
-            if(empty($this->error_404['execute'])){
-                throw new PageNotFoundException('Error 404 : Page Not Found');
-            }
-            \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $this->error_404['options']['arguments']);
-            if(\is_callable($this->error_404['execute'])){
-                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
-                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
-                return $this->response = $this->execute($this->error_404['execute'], $this->error_404['options']['arguments']);
-            }
-            $parse = $this->getControllerMethod($this->error_404['execute'], $this->error_404['options']);
-            $parse['controller'] = $this->controllerFind($parse['controller']);
-            $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
-            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
-            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
-
-            return $this->response = $this->execute([$controller, $parse['method']], $this->error_404['options']['arguments']);
+            return $this->notFound();
         }
 
         $route = $this->current_route;
@@ -723,27 +727,30 @@ class Router
         if($responseStatusCode < 200 || $responseStatusCode > 299){
             return $this->response;
         }
-
-        if(\is_callable($route['execute'])){
-            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
-            \define('INITPHP_ROUTER_CURRENT_METHOD', '');
-            $this->response = $this->execute($route['execute'], $arguments);
-        }else{
-            $parse = $this->getControllerMethod($route['execute'], $route['options']);
-            $parse['controller'] = $this->controllerFind($parse['controller']);
-            $reflection = new \ReflectionClass($parse['controller']);
-            $controller = $this->getClassContainer($reflection);
-            $this->middleware_handle($this->controller_middlewares_property($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
-            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
-            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
-            $responseStatusCode = (int)$this->response->getStatusCode();
-            if($responseStatusCode < 200 || $responseStatusCode > 299){
-                return $this->response;
-            }
-            $this->response = $this->execute([$controller, $parse['method']], $arguments);
-            $after_middleware = $this->controller_middlewares_property($controller, $parse['method'], self::AFTER);
-            if(!empty($after_middleware)){
-                $filters['after'] = \array_merge($filters['after'], $after_middleware);
+        if ($route['methods'] === ['LINK']) {
+            return $this->execute($route['execute'], $arguments, self::LINK);
+        } else {
+            if(\is_callable($route['execute'])){
+                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
+                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
+                $this->response = $this->execute($route['execute'], $arguments);
+            }else{
+                $parse = $this->getControllerMethod($route['execute'], $route['options']);
+                $parse['controller'] = $this->controllerFind($parse['controller']);
+                $reflection = new \ReflectionClass($parse['controller']);
+                $controller = $this->getClassContainer($reflection);
+                $this->middleware_handle($this->controller_middlewares_property($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
+                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
+                \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+                $responseStatusCode = (int)$this->response->getStatusCode();
+                if($responseStatusCode < 200 || $responseStatusCode > 299){
+                    return $this->response;
+                }
+                $this->response = $this->execute([$controller, $parse['method']], $arguments);
+                $after_middleware = $this->controller_middlewares_property($controller, $parse['method'], self::AFTER);
+                if(!empty($after_middleware)){
+                    $filters['after'] = \array_merge($filters['after'], $after_middleware);
+                }
             }
         }
 
@@ -762,7 +769,7 @@ class Router
         $this->current_url = $current_url;
         $this->current_method = $method = \strtoupper($method);
 
-        $routes = \array_unique(\array_merge($this->methodIds['ANY'], $this->methodIds[$method]));
+        $routes = \array_unique(\array_merge($this->methodIds['LINK'], $this->methodIds['ANY'], $this->methodIds[$method]));
         $patterns = $this->getPatterns();
         $matches = [];
         foreach ($routes as $id) {
@@ -779,6 +786,9 @@ class Router
             if(\preg_match('#^' . $path . '$#', $this->current_url, $arguments)){
                 \array_shift($arguments);
                 $route['arguments'] = $arguments;
+                if ($route['methods'] === ['LINK']) {
+                    return $this->current_method = $route;
+                }
                 $matches_size = \strlen($route['path']);
                 if(\is_array($arguments) && !empty($arguments)){
                     $matches_size += (\count($arguments) * 25);
@@ -938,8 +948,25 @@ class Router
         }
     }
 
-    private function execute($execute, array $arguments): ResponseInterface
+    private function execute($execute, array $arguments, int $type = self::ROUTE): ResponseInterface
     {
+        if ($type === self::LINK) {
+            $path = $execute
+                . ($arguments[0] ?? '');
+            if (\is_file($path)) {
+                if (($size = \filesize($path)) < 2097152) {
+                    $this->response->getBody()->write(@\file_get_contents($path));
+                    return $this->response = $this->response->withHeader('Content-Type', \mime_content_type($path))
+                        ->withHeader('Content-Length', $size);
+                } else {
+                    @header("Content-Type: " . \mime_content_type($path) . ";");
+                    @header("Content-Length: " . $size . ";");
+                    readfile($path);
+                    exit;
+                }
+            }
+            return $this->notFound();
+        }
         $reflection = is_array($execute) ? new \ReflectionMethod($execute[0], $execute[1]) : new \ReflectionFunction($execute);
         ob_start(function ($tmp) {
             $this->content .= $tmp;
@@ -1285,6 +1312,37 @@ class Router
             $res[] = $row;
         }
         return $res;
+    }
+
+    private function notFound(): ResponseInterface
+    {
+        $this->response = $this->response->withStatus(404);
+        if(empty($this->error_404['execute'])){
+            throw new PageNotFoundException('Error 404 : Page Not Found');
+        }
+        if (!\defined("INITPHP_ROUTER_CURRENT_ARGUMENTS")) {
+            \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $this->error_404['options']['arguments']);
+        }
+        if(\is_callable($this->error_404['execute'])){
+            if (!\defined("INITPHP_ROUTER_CURRENT_CONTROLLER")) {
+                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
+            }
+            if (!\defined("INITPHP_ROUTER_CURRENT_METHOD")) {
+                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
+            }
+            return $this->response = $this->execute($this->error_404['execute'], $this->error_404['options']['arguments']);
+        }
+        $parse = $this->getControllerMethod($this->error_404['execute'], $this->error_404['options']);
+        $parse['controller'] = $this->controllerFind($parse['controller']);
+        $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
+        if (!\defined("INITPHP_ROUTER_CURRENT_CONTROLLER")) {
+            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
+        }
+        if (!\defined("INITPHP_ROUTER_CURRENT_METHOD")) {
+            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+        }
+
+        return $this->response = $this->execute([$controller, $parse['method']], $this->error_404['options']['arguments']);
     }
 
 }
