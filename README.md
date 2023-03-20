@@ -56,7 +56,7 @@ server {
 	}
 	location ~ \.php$ {
 		fastcgi_split_path_info ^(.+\.php)(/.+)$;
-		fastcgi_pass unix:/var/run/php5-fpm.sock;
+		fastcgi_pass unix:/var/run/php7.4-fpm.sock;
 		fastcgi_index index.php;
 		include fastcgi.conf;
 		fastcgi_intercept_errors on;
@@ -68,16 +68,17 @@ server {
 
 ```php
 $config = [
-    'paths'             => [
-        'controller'        => null, //The full path to the directory where the Controller classes are kept.
-        'middleware'        => null, //The full path to the directory where the Middleware classes are kept.
+    'paths'                 => [
+        'controller'            => null, //The full path to the directory where the Controller classes are kept.
+        'middleware'            => null, //The full path to the directory where the Middleware classes are kept.
     ],
-    'namespaces'        => [
-        'controller'        => null, //Namespace prefix of Controller classes, if applicable.
-        'middleware'        => null, //Namespace prefix of Middleware classes, if applicable.
+    'namespaces'            => [
+        'controller'            => null, //Namespace prefix of Controller classes, if applicable.
+        'middleware'            => null, //Namespace prefix of Middleware classes, if applicable.
     ],
-    'base_path'         => '/', // If you are working in a subdirectory; identifies your working directory.
-    'variable_method'   => false, // It makes the request method mutable with Laravel-like $_REQUEST['_method'].
+    'base_path'             => '/', // If you are working in a subdirectory; identifies your working directory.
+    'variable_method'       => false, // It makes the request method mutable with Laravel-like $_REQUEST['_method'].
+    'argument_new_instance' => false, // This configuration is used for Request and Response objects that you want as arguments.
 ];
 ```
 
@@ -93,30 +94,12 @@ _**See the Wiki for detailed documentation.**_
 
 ```php
 require_once "vendor/autoload.php";
-use \InitPHP\HTTP\{Request, Response, Stream, Emitter};
+use \InitPHP\HTTP\Message\{Request, Response, Stream};
+use \InitPHP\HTTP\Emitter\Emitter;
 use \InitPHP\Router\Router;
 
-if(($headers = function_exists('apache_request_headers') ? apache_request_headers() : []) === FALSE){
-    $headers = [];
-}
-
-$uri = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-        . '://' 
-        . ($_SERVER['SERVER_NAME'] ?? 'localhost')
-        . (isset($_SERVER['SERVER_PORT']) && !\in_array($_SERVER['SERVER_PORT'], [80, 443]) ? ':' . $_SERVER['SERVER_PORT'] : '')
-        . ($_SERVER['REQUEST_URI'] ?? '/');
-
-// Construct the HTTP request object.
-$request = new Request(
-    ($_SERVER['REQUEST_METHOD'] ?? 'GET'),
-    $uri,
-    $headers,
-    null,
-    '1.1'
-);
-
-// Create a new HTTP response object.
-$response = new Response(200, [], (new Stream('', null)), '1.1');
+$request = Request::createFromGlobals();
+$response = new Response();
 
 // Create the router object.
 $router = new Router($request, $response, []);
@@ -124,6 +107,13 @@ $router = new Router($request, $response, []);
 // ... Create routes.
 $router->get('/', function () {
     return 'Hello World!';
+});
+
+$router->post('/login', function (Request $request, Response $response) {
+    return $response->json([
+        'status'        => 0,
+        'message'       => 'Unauthorized',
+    ], 401);
 });
 
 // If you do not make a definition for 404 errors; An exception is thrown if there is no match with the request.

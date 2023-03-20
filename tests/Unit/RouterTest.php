@@ -15,9 +15,7 @@ declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use InitPHP\HTTP\Request;
-use InitPHP\HTTP\Response;
-use InitPHP\HTTP\Stream;
+use \InitPHP\HTTP\Message\{Request, Response, Stream};
 use InitPHP\Router\Exception\InvalidArgumentException;
 use InitPHP\Router\Exception\PageNotFoundException;
 use InitPHP\Router\Router;

@@ -7,7 +7,7 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.3
+ * @version    1.2.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -45,17 +45,20 @@ class Router
     protected $cache_status = false;
 
     protected $configs = [
-        'paths'             => [
-            'controller'    => null,
-            'middleware'    => null,
+        'paths'                     => [
+            'controller'                => null,
+            'middleware'                => null,
         ],
-        'namespaces'        => [
-            'controller'    => null,
-            'middleware'    => null,
+        'namespaces'                => [
+            'controller'                => null,
+            'middleware'                => null,
         ],
-        'base_path'         => '/',
-        'variable_method'   => false,
+        'base_path'                 => '/',
+        'variable_method'           => false,
+        'argument_new_instance'     => false,
     ];
+
+    protected $argumentNewInstance = false;
 
     protected $patterns = [
         '{[^/]+}'           => '([^/]+)',
@@ -134,6 +137,8 @@ class Router
             unset($configs['cache']);
         }
         $this->configs = \array_merge($this->configs, $configs);
+        $this->argumentNewInstance = $this->configs['argument_new_instance'];
+        unset($this->configs['argument_new_instance']);
         $this->request = &$request;
         $this->response = &$response;
         $this->uri = new Uri($this->request->getUri()->__toString());
@@ -1016,13 +1021,15 @@ class Router
                 }
                 continue;
             }
-            if($class->isInstance($this->request)){
-                $arguments[] = $this->request;
-                continue;
-            }
-            if($class->isInstance($this->response)){
-                $arguments[] = $this->response;
-                continue;
+            if (!$this->argumentNewInstance) {
+                if($class->isInstance($this->request)){
+                    $arguments[] = $this->request;
+                    continue;
+                }
+                if($class->isInstance($this->response)){
+                    $arguments[] = $this->response;
+                    continue;
+                }
             }
             if($class->isInstantiable()){
                 $arguments[] = $this->getClassContainer($class);
@@ -1033,11 +1040,13 @@ class Router
 
     private function getClassContainer(\ReflectionClass $class): object
     {
-        if($class->isInstance($this->request)){
-            return $this->request;
-        }
-        if($class->isInstance($this->response)){
-            return $this->response;
+        if (!$this->argumentNewInstance) {
+            if($class->isInstance($this->request)){
+                return $this->request;
+            }
+            if($class->isInstance($this->response)){
+                return $this->response;
+            }
         }
         if(isset($this->container) && is_object($this->container)){
             return $this->container->get($class->getName());
