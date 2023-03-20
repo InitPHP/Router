@@ -15,7 +15,7 @@ declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use \InitPHP\HTTP\{Request, Response, Stream};
+use \InitPHP\HTTP\Message\{Request, Response, Stream};
 use InitPHP\Router\Router;
 use \Psr\Http\Message\{RequestInterface, ResponseInterface};
 
