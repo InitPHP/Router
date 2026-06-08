@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ExampleController.php
  *
@@ -17,7 +18,6 @@ namespace Tests\Router\Unit;
 
 class ExampleController
 {
-
     public function index()
     {
 

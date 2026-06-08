@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RouterTest.php
  *
@@ -15,7 +16,7 @@ declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use \InitPHP\HTTP\Message\{Request, Response, Stream};
+use InitPHP\HTTP\Message\{Request, Response, Stream};
 use InitPHP\Router\Exception\InvalidArgumentException;
 use InitPHP\Router\Exception\PageNotFoundException;
 use InitPHP\Router\Router;
@@ -24,7 +25,6 @@ use Psr\Http\Message\ResponseInterface;
 
 class RouterTest extends \PHPUnit\Framework\TestCase
 {
-
     /** @var RequestInterface */
     protected $request;
 
@@ -63,7 +63,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
             'http://www.example.com/' => [
                 'execute'   => ['Home', 'index'],
                 'options'   => $this->options,
-            ]
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes('get'));
@@ -79,13 +79,13 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
             'POST'  => [
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -103,13 +103,13 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
             'GET'   => [
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -127,7 +127,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -145,7 +145,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -163,7 +163,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -181,7 +181,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -199,7 +199,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -217,7 +217,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -235,7 +235,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -253,7 +253,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/' => [
                     'execute'   => ['Home', 'index'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
         ];
 
@@ -278,8 +278,8 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/admin/login'   => [
                     'execute'   => ['Admin', 'login'],
                     'options'   => \array_merge($this->options, ['prefix' => '/admin']),
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
@@ -318,14 +318,14 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/admin/posts/add' => [
                     'execute'   => ['AdminPost', 'add'],
                     'options'   => \array_merge($this->options, ['prefix' => '/admin/posts']),
-                ]
+                ],
             ],
             'DELETE'    => [
                 'http://www.example.com/admin/posts/delete/{id}' => [
                     'execute'   => ['AdminPost', 'delete'],
                     'options'   => \array_merge($this->options, ['prefix' => '/admin/posts']),
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
@@ -378,15 +378,14 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
                     'options'   => $this->options,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
 
         $this->router->destroy();
     }
-
 
     public function testRegisterAPortGroupRoute()
     {
@@ -424,14 +423,14 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
                     'options'   => $this->options,
-                ]
+                ],
             ],
             'POST'  => [
                 'http://www.example.com:9000/user/add'    => [
                     'execute'   => ['Api', 'add'],
                     'options'   => \array_merge($this->options, ['prefix' => '/user']),
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
@@ -481,8 +480,8 @@ class RouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/about'   => [
                     'execute'   => ['Main', 'about'],
                     'options'   => $this->options,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes(null));
@@ -508,11 +507,9 @@ class RouterTest extends \PHPUnit\Framework\TestCase
     public function testThrowsRouteResolveNotFound(
         string $uri,
         string $method
-    )
-    {
+    ) {
         $this->router->get('/', ['Main', 'index']);
         $this->router->post('/about', ['Main', 'about']);
-
 
         $this->router->resolve($method, $uri);
         $this->expectException(PageNotFoundException::class);
@@ -526,7 +523,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
         return [
             ['http://www.example.com/', 'post'],
             ['http://www.example.com/about', 'get'],
-            ['http://www.example.com/contact', 'delete']
+            ['http://www.example.com/contact', 'delete'],
         ];
     }
 
@@ -562,7 +559,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
             'options'   => $this->options,
             'arguments' => [
                 'muhametsafak',
-                12
+                12,
             ],
         ];
 

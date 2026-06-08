@@ -1,4 +1,5 @@
 <?php
+
 /**
  * NamedAndURLCreateTest.php
  *
@@ -15,9 +16,9 @@ declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use \InitPHP\HTTP\Message\{Request, Response, Stream};
+use InitPHP\HTTP\Message\{Request, Response, Stream};
 use InitPHP\Router\Router;
-use \Psr\Http\Message\{RequestInterface, ResponseInterface};
+use Psr\Http\Message\{RequestInterface, ResponseInterface};
 
 class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
 {
@@ -41,7 +42,6 @@ class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
         parent::setUp();
     }
 
-
     public function testGeneratingUrlFromNamedRoutes()
     {
         $this->router->get('/home', ['Home', 'index'], ['name' => 'homeIndex']);
@@ -57,7 +57,7 @@ class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
 
         $this->assertEquals('http://localhost/user/5/admin', $this->router->route('user_profile', [
             'id'    => 5,
-            'slug'  => 'admin'
+            'slug'  => 'admin',
         ]));
 
         $this->router->destroy();
@@ -82,7 +82,7 @@ class NamedAndURLCreateTest extends \PHPUnit\Framework\TestCase
         }, ['as' => 'userSite.']);
 
         $this->assertEquals('http://admin.example.com/', $this->router->route('userSite.index', [
-            'username'  => 'admin'
+            'username'  => 'admin',
         ]));
 
         $this->router->destroy();

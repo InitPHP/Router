@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Middleware.php
  *
@@ -15,11 +16,10 @@ declare(strict_types=1);
 
 namespace InitPHP\Router;
 
-use \Psr\Http\Message\{RequestInterface, ResponseInterface};
+use Psr\Http\Message\{RequestInterface, ResponseInterface};
 
 abstract class Middleware
 {
-
     /**
      * The method to run before the routes start executing.
      *

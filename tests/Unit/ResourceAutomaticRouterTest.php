@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ResourceAutomaticRouterTest.php
  *
@@ -15,9 +16,9 @@ declare(strict_types=1);
 
 namespace Tests\Router\Unit;
 
-use \InitPHP\HTTP\Message\{Request, Response, Stream};
+use InitPHP\HTTP\Message\{Request, Response, Stream};
 use InitPHP\Router\Router;
-use \Psr\Http\Message\{RequestInterface, ResponseInterface};
+use Psr\Http\Message\{RequestInterface, ResponseInterface};
 
 class ResourceAutomaticRouterTest extends \PHPUnit\Framework\TestCase
 {
@@ -40,7 +41,7 @@ class ResourceAutomaticRouterTest extends \PHPUnit\Framework\TestCase
             ],
             'namespaces'    => [
                 'controller'    => '\\Tests\\Router\\Unit',
-            ]
+            ],
         ]);
         parent::setUp();
     }
@@ -75,37 +76,35 @@ class ResourceAutomaticRouterTest extends \PHPUnit\Framework\TestCase
                 'http://www.example.com/photos/{photos}/edit' => [
                     'execute'   => '\Tests\Router\Unit\ExampleController::edit',
                     'options'   => $options,
-                ]
+                ],
             ],
             'POST'      => [
                 'http://www.example.com/photos' => [
                     'execute'   => '\Tests\Router\Unit\ExampleController::store',
                     'options'   => $options,
-                ]
+                ],
             ],
             'PUT'       => [
                 'http://www.example.com/photos/{photos}' => [
                     'execute'   => '\Tests\Router\Unit\ExampleController::update',
                     'options'   => $options,
-                ]
+                ],
             ],
             'PATCH'     => [
                 'http://www.example.com/photos/{photos}' => [
                     'execute'   => '\Tests\Router\Unit\ExampleController::update',
                     'options'   => $options,
-                ]
+                ],
             ],
             'DELETE'    => [
                 'http://www.example.com/photos/{photos}' => [
                     'execute'   => '\Tests\Router\Unit\ExampleController::destroy',
                     'options'   => $options,
-                ]
+                ],
             ],
         ];
 
         $this->assertEquals($expected, $this->router->getRoutes());
     }
 
-
 }
-

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Uri.php
  *
@@ -51,7 +52,7 @@ final class Uri
 
     public function withScheme(string $scheme): self
     {
-        if(!\in_array($scheme, ['http', 'https'], true)){
+        if (!\in_array($scheme, ['http', 'https'], true)) {
             return $this;
         }
         $this->scheme = $scheme;
@@ -61,7 +62,7 @@ final class Uri
     public function withHost($host): self
     {
         $host = \strtolower($host);
-        if($host === $this->host){
+        if ($host === $this->host) {
             return $this;
         }
         $this->host = $host;
@@ -82,17 +83,17 @@ final class Uri
 
     public function boot(string $url)
     {
-        if($url === ''){
+        if ($url === '') {
             return;
         }
-        if(($parse = \parse_url($url)) === FALSE){
+        if (($parse = \parse_url($url)) === false) {
             throw new InvalidArgumentException(\sprintf('Unable to parse URI: "%s"', $url));
         }
         $this->scheme = isset($parse['scheme']) ? \strtolower($parse['scheme']) : 'http';
         $this->userInfo = $parse['user'] ?? '';
         $this->host = isset($parse['host']) ? \strtolower($parse['host']) : '';
 
-        if(isset($parse['port']) && ($parse['port'] != 80 || $parse['port'] != 443)){
+        if (isset($parse['port']) && ($parse['port'] != 80 || $parse['port'] != 443)) {
             $this->port = $parse['port'];
         }
         $this->path = $parse['path'] ?? '/';

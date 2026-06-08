@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Router.php
  *
@@ -15,12 +16,11 @@ declare(strict_types=1);
 
 namespace InitPHP\Router;
 
-use \InitPHP\Router\Exception\{RouterException, PageNotFoundException, InvalidArgumentException};
-use \Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
+use InitPHP\Router\Exception\{InvalidArgumentException, PageNotFoundException, RouterException};
+use Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
 
 class Router
 {
-
     public const BOTH = 0; // both
     public const BEFORE = -1; // before
     public const AFTER = 1; // after
@@ -31,14 +31,14 @@ class Router
 
     public const SUPPORTED_METHODS = [
         'GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS',
-        'ANY', 'LINK'
+        'ANY', 'LINK',
     ];
 
     /** @var array  */
     protected $cache_configs = [
         'enable'    => false,
         'path'      => null,
-        'ttl'       => 86400
+        'ttl'       => 86400,
     ];
 
     /** @var bool */
@@ -125,14 +125,13 @@ class Router
     private $filter_objects = [];
     private $content = '';
 
-
     public function __construct(RequestInterface $request, ResponseInterface $response, array $configs = [])
     {
-        if(isset($configs['container'])){
+        if (isset($configs['container'])) {
             $this->container = $configs['container'];
             unset($configs['container']);
         }
-        if(isset($configs['cache'])){
+        if (isset($configs['cache'])) {
             $this->cache_configs = \array_merge($this->cache_configs, $configs['cache']);
             unset($configs['cache']);
         }
@@ -163,10 +162,10 @@ class Router
     public function getRoutes(?string $method = null): array
     {
         $res = [];
-        if($method === null){
+        if ($method === null) {
             foreach ($this->routes as $route) {
                 foreach ($route['methods'] as $_method) {
-                    if(!isset($res[$_method])){
+                    if (!isset($res[$_method])) {
                         $res[$_method] = [];
                     }
                     $res[$_method][$route['path']] = [
@@ -178,7 +177,7 @@ class Router
             return $res;
         }
         $method = \strtoupper($method);
-        if(isset($this->methodIds[$method])){
+        if (isset($this->methodIds[$method])) {
             foreach ($this->methodIds[$method] as $id) {
                 $route = $this->routes[$id];
                 $res[$route['path']] = [
@@ -217,14 +216,14 @@ class Router
      */
     public function register($methods, string $path, $execute, array $options = []): self
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return $this;
         }
-        if(!\is_string($execute) && !\is_callable($execute) && !\is_array($execute)){
-            throw new InvalidArgumentException("\$execute can be string, callable, or array.");
+        if (!\is_string($execute) && !\is_callable($execute) && !\is_array($execute)) {
+            throw new InvalidArgumentException('$execute can be string, callable, or array.');
         }
-        if(!\is_string($methods) && !\is_array($methods)){
-            throw new InvalidArgumentException("\$methods can be string or array.");
+        if (!\is_string($methods) && !\is_array($methods)) {
+            throw new InvalidArgumentException('$methods can be string or array.');
         }
 
         ++$this->id;
@@ -241,29 +240,29 @@ class Router
         $uri = clone $this->uri;
         $uri->withPath($path);
 
-        if(isset($options['host']) && !empty($options['host']) && \is_string($options['host'])){
+        if (isset($options['host']) && !empty($options['host']) && \is_string($options['host'])) {
             $uri->withHost($options['host']);
             unset($options['host']);
         }
-        if(isset($options['port']) && !empty($options['port']) && \is_int($options['port'])){
+        if (isset($options['port']) && !empty($options['port']) && \is_int($options['port'])) {
             $uri->withPort($options['port']);
             unset($options['port']);
         }
-        if(isset($options['scheme']) && \in_array($options['scheme'], ['http', 'https'], true)){
+        if (isset($options['scheme']) && \in_array($options['scheme'], ['http', 'https'], true)) {
             $uri->withScheme($options['scheme']);
             unset($options['scheme']);
         }
 
-        if(isset($options['name'])){
-            if(\is_array($options['name'])){
+        if (isset($options['name'])) {
+            if (\is_array($options['name'])) {
                 $options['name'] = \implode('', $options['name']);
             }
-            if(isset($options['as'])){
+            if (isset($options['as'])) {
                 $options['name'] = $options['as'] . $options['name'];
             }
             $name = \trim($options['name']);
             unset($options['name']);
-            if(isset($this->names[$name])){
+            if (isset($this->names[$name])) {
                 throw new RouterException('The name "' . $name . '" is already in use by another route.');
             }
             $this->names[$name] = $this->id;
@@ -280,11 +279,10 @@ class Router
         return $this;
     }
 
-
     public function link(string $link, string $source, array $options = []): self
     {
         if (!\file_exists($source)) {
-            throw new InvalidArgumentException("\$source can be directory or file.");
+            throw new InvalidArgumentException('$source can be directory or file.');
         }
         if (\is_dir($source)) {
             $link = \rtrim($link, '/') . '/(.*)';
@@ -411,15 +409,15 @@ class Router
      */
     public function error_404($execute, array $options = []): self
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return $this;
         }
-        if(!\is_array($execute) && !\is_string($execute) && !\is_callable($execute)){
-            throw new InvalidArgumentException("\$execute can be string, callable, or array.");
+        if (!\is_array($execute) && !\is_string($execute) && !\is_callable($execute)) {
+            throw new InvalidArgumentException('$execute can be string, callable, or array.');
         }
         $this->error_404 = [
             'execute'   => $execute,
-            'options'   => \array_merge($this->error_404['options'], $options)
+            'options'   => \array_merge($this->error_404['options'], $options),
         ];
         return $this;
     }
@@ -434,7 +432,7 @@ class Router
      */
     public function group(string $prefix, \Closure $group, array $options = []): void
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return;
         }
         $prev_group_options = $this->group_options;
@@ -454,7 +452,7 @@ class Router
      */
     public function domain(string $host, \Closure $group, array $options = []): void
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return;
         }
         $prev_group_options = $this->group_options;
@@ -474,7 +472,7 @@ class Router
      */
     public function port(int $port, \Closure $group, array $options = []): void
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return;
         }
         $prev_group_options = $this->group_options;
@@ -494,7 +492,7 @@ class Router
      */
     public function ip($ip, \Closure $group, array $options = []): void
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return;
         }
         $prev_group_options = $this->group_options;
@@ -513,7 +511,7 @@ class Router
      */
     public function resource(string $prefix, string $controller)
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return;
         }
         $prefix = \trim($prefix, '/');
@@ -537,17 +535,17 @@ class Router
      */
     public function name(string $name): self
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return $this;
         }
-        if(!isset($this->routes[$this->id])){
+        if (!isset($this->routes[$this->id])) {
             throw new RouterException('The route to add the name could not be found.');
         }
-        if(isset($this->routes[$this->id]['options']['as'])){
+        if (isset($this->routes[$this->id]['options']['as'])) {
             $name = $this->routes[$this->id]['options']['as'] . $name;
         }
         $name = \trim($name);
-        if(isset($this->names[$name])){
+        if (isset($this->names[$name])) {
             throw new RouterException('The name "' . $name . '" is already in use by another route.');
         }
         $this->names[$name] = $this->id;
@@ -564,18 +562,18 @@ class Router
     public function route(string $name, array $arguments = []): string
     {
         $name = \trim($name);
-        if(!isset($this->names[$name])){
+        if (!isset($this->names[$name])) {
             return $name;
         }
         $id = $this->names[$name];
         $path = $this->routes[$id]['path'];
-        if(!empty($arguments)){
+        if (!empty($arguments)) {
             $replace = [];
             foreach ($arguments as $key => $value) {
                 $key = \trim($key, ':{} ');
-                if(\is_object($value) && \method_exists($value, '__toString')){
+                if (\is_object($value) && \method_exists($value, '__toString')) {
                     $value = $value->__toString();
-                }else{
+                } else {
                     $value = (string)$value;
                 }
                 $replace['{'.$key.'}'] = $value;
@@ -584,15 +582,15 @@ class Router
                 $replace[':'.$key.'?'] = $value;
             }
             $url = \strtr($path, $replace);
-        }else{
+        } else {
             $url = $path;
         }
-        if(\strpos($url, '?') === FALSE){
+        if (\strpos($url, '?') === false) {
             return $url;
         }
         $url = \preg_replace('/({[\w\-_]+}\?|:[\w\-_]+\?)/', '?', $url);
         $url = \str_replace('?', '', $url);
-        if(\rtrim($url, '/') != $url){
+        if (\rtrim($url, '/') != $url) {
             $url = \rtrim($url, '/') . '/';
         }
         return $url;
@@ -609,30 +607,30 @@ class Router
      */
     public function filter($filter, int $position = self::BOTH): self
     {
-        if($this->cache_status){
+        if ($this->cache_status) {
             return $this;
         }
-        if(!isset($this->routes[$this->id])){
+        if (!isset($this->routes[$this->id])) {
             throw new RouterException('The route to add the filter could not be found.');
         }
-        if(!\is_string($filter) && !\is_callable($filter)){
+        if (!\is_string($filter) && !\is_callable($filter)) {
             throw new RouterException('Middleware/filter can only be string or callable.');
         }
-        if(!\in_array($position, [self::BEFORE, self::BOTH, self::AFTER], true)){
-            throw new RouterException("The value given for the parameter \$position is not valid.");
+        if (!\in_array($position, [self::BEFORE, self::BOTH, self::AFTER], true)) {
+            throw new RouterException('The value given for the parameter $position is not valid.');
         }
-        if(!isset($this->routes[$this->id]['options']['middleware'])){
+        if (!isset($this->routes[$this->id]['options']['middleware'])) {
             $this->routes[$this->id]['options']['middleware'] = [];
         }
         switch ($position) {
             case self::BEFORE:
-                if(!isset($this->routes[$this->id]['options']['middleware']['before'])){
+                if (!isset($this->routes[$this->id]['options']['middleware']['before'])) {
                     $this->routes[$this->id]['options']['middleware']['before'] = [];
                 }
                 $this->routes[$this->id]['options']['middleware']['before'][] = $filter;
                 break;
             case self::AFTER:
-                if(!isset($this->routes[$this->id]['options']['middleware']['after'])){
+                if (!isset($this->routes[$this->id]['options']['middleware']['after'])) {
                     $this->routes[$this->id]['options']['middleware']['after'] = [];
                 }
                 $this->routes[$this->id]['options']['middleware']['after'][] = $filter;
@@ -666,7 +664,7 @@ class Router
     public function pattern(string $key, string $pattern): self
     {
         $key = \trim($key, ':{}');
-        if(\substr($pattern, 0, 1) != '(' && \substr($pattern, -1) != ')'){
+        if (\substr($pattern, 0, 1) != '(' && \substr($pattern, -1) != ')') {
             $pattern = '(' . $pattern . ')';
         }
         $this->patterns[':' . $key] = $pattern;
@@ -695,13 +693,13 @@ class Router
      */
     public function dispatch(): ResponseInterface
     {
-        if(!isset($this->current_route)){
+        if (!isset($this->current_route)) {
             $this->current_route = $this->resolve($this->current_method, $this->current_url);
         }
 
         $hasRoute = isset($this->current_route) && !empty($this->current_route);
 
-        if($hasRoute === FALSE){
+        if ($hasRoute === false) {
             return $this->notFound();
         }
 
@@ -713,15 +711,15 @@ class Router
             'before'    => [],
             'after'     => [],
         ];
-        if(isset($route['options']['middleware']['before'])){
+        if (isset($route['options']['middleware']['before'])) {
             $filters['before'] = $route['options']['middleware']['before'];
             unset($route['options']['middleware']['before']);
         }
-        if(isset($route['options']['middleware']['after'])){
+        if (isset($route['options']['middleware']['after'])) {
             $filters['after'] = $route['options']['middleware']['after'];
             unset($route['options']['middleware']['after']);
         }
-        if(isset($route['options']['middleware']) && !empty($route['options']['middleware'])){
+        if (isset($route['options']['middleware']) && !empty($route['options']['middleware'])) {
             $filters['before'] = \array_merge($route['options']['middleware'], $filters['before']);
             $filters['after'] = \array_merge($route['options']['middleware'], $filters['after']);
             unset($route['options']['middleware']);
@@ -729,17 +727,17 @@ class Router
 
         $this->middleware_handle($filters['before'], $arguments, self::BEFORE);
         $responseStatusCode = (int)$this->response->getStatusCode();
-        if($responseStatusCode < 200 || $responseStatusCode > 299){
+        if ($responseStatusCode < 200 || $responseStatusCode > 299) {
             return $this->response;
         }
         if ($route['methods'] === ['LINK']) {
             return $this->execute($route['execute'], $arguments, self::LINK);
         } else {
-            if(\is_callable($route['execute'])){
+            if (\is_callable($route['execute'])) {
                 \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
                 \define('INITPHP_ROUTER_CURRENT_METHOD', '');
                 $this->response = $this->execute($route['execute'], $arguments);
-            }else{
+            } else {
                 $parse = $this->getControllerMethod($route['execute'], $route['options']);
                 $parse['controller'] = $this->controllerFind($parse['controller']);
                 $reflection = new \ReflectionClass($parse['controller']);
@@ -748,12 +746,12 @@ class Router
                 \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
                 \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
                 $responseStatusCode = (int)$this->response->getStatusCode();
-                if($responseStatusCode < 200 || $responseStatusCode > 299){
+                if ($responseStatusCode < 200 || $responseStatusCode > 299) {
                     return $this->response;
                 }
                 $this->response = $this->execute([$controller, $parse['method']], $arguments);
                 $after_middleware = $this->controller_middlewares_property($controller, $parse['method'], self::AFTER);
-                if(!empty($after_middleware)){
+                if (!empty($after_middleware)) {
                     $filters['after'] = \array_merge($filters['after'], $after_middleware);
                 }
             }
@@ -779,26 +777,26 @@ class Router
         $matches = [];
         foreach ($routes as $id) {
             $route = $this->routes[$id];
-            if(isset($route['options']['ip']) && !empty($route['options']['ip'])){
-                if(\is_array($route['options']['ip']) && !\in_array($this->current_ip, $route['options']['ip'], true)){
+            if (isset($route['options']['ip']) && !empty($route['options']['ip'])) {
+                if (\is_array($route['options']['ip']) && !\in_array($this->current_ip, $route['options']['ip'], true)) {
                     continue;
                 }
-                if($route['options']['ip'] != $this->current_ip){
+                if ($route['options']['ip'] != $this->current_ip) {
                     continue;
                 }
             }
             $path = \preg_replace($patterns['keys'], $patterns['values'], $route['path']);
-            if(\preg_match('#^' . $path . '$#', $this->current_url, $arguments)){
+            if (\preg_match('#^' . $path . '$#', $this->current_url, $arguments)) {
                 \array_shift($arguments);
                 $route['arguments'] = $arguments;
                 if ($route['methods'] === ['LINK']) {
                     return $this->current_method = $route;
                 }
                 $matches_size = \strlen($route['path']);
-                if(\is_array($arguments) && !empty($arguments)){
+                if (\is_array($arguments) && !empty($arguments)) {
                     $matches_size += (\count($arguments) * 25);
                 }
-                if(!isset($matches[$matches_size])){
+                if (!isset($matches[$matches_size])) {
                     $matches[$matches_size] = [];
                 }
                 $matches[$matches_size][] = [
@@ -807,7 +805,7 @@ class Router
                 continue;
             }
         }
-        if(!empty($matches)){
+        if (!empty($matches)) {
             \krsort($matches);
             $current_match = \current($matches);
             return $this->current_route = $current_match[0]['route'];
@@ -817,35 +815,35 @@ class Router
 
     private function controller_middlewares_property(object $controller, string $method, int $pos = self::BEFORE): array
     {
-        if(!\property_exists($controller, 'middlewares')){
+        if (!\property_exists($controller, 'middlewares')) {
             return [];
         }
         $reflection = new \ReflectionProperty($controller, 'middlewares');
-        if(!$reflection->isPublic()){
+        if (!$reflection->isPublic()) {
             return [];
         }
         unset($reflection);
         $middlewares = $controller->middlewares;
-        if(!\is_array($middlewares)){
+        if (!\is_array($middlewares)) {
             return [];
         }
         $res = [];
-        if($pos === self::BEFORE){
-            if(isset($middlewares['after'])){
+        if ($pos === self::BEFORE) {
+            if (isset($middlewares['after'])) {
                 unset($middlewares['after']);
             }
-            if(isset($middlewares['before'])){
-                if(!\is_array($middlewares['before'])){
+            if (isset($middlewares['before'])) {
+                if (!\is_array($middlewares['before'])) {
                     $middlewares['before'] = [$middlewares['before']];
                 }
                 $res = $middlewares['before'];
             }
-        }else{
-            if(isset($middlewares['before'])){
+        } else {
+            if (isset($middlewares['before'])) {
                 unset($middlewares['before']);
             }
-            if(isset($middlewares['after'])){
-                if(!\is_array($middlewares['after'])){
+            if (isset($middlewares['after'])) {
+                if (!\is_array($middlewares['after'])) {
                     $middlewares['after'] = [$middlewares['after']];
                 }
                 $res = $middlewares['after'];
@@ -853,29 +851,29 @@ class Router
         }
         $method_len = \strlen($method);
         foreach ($middlewares as $key => $value) {
-            if(!\is_string($key)){
+            if (!\is_string($key)) {
                 $res[] = $value;
                 continue;
             }
-            if(!\is_array($value)){
+            if (!\is_array($value)) {
                 continue;
             }
-            if($key !== $method){
+            if ($key !== $method) {
                 continue;
             }
-            if(isset($value['before'])){
-                if($pos === self::BEFORE && \is_array($value['before'])){
+            if (isset($value['before'])) {
+                if ($pos === self::BEFORE && \is_array($value['before'])) {
                     $res = \array_merge($res, $value['before']);
                 }
                 unset($value['before']);
             }
-            if(isset($value['after'])){
-                if($pos === self::AFTER && \is_array($value['after'])){
+            if (isset($value['after'])) {
+                if ($pos === self::AFTER && \is_array($value['after'])) {
                     $res = \array_merge($res, $value['after']);
                 }
                 unset($value['after']);
             }
-            if(empty($value) || !\is_array($value)){
+            if (empty($value) || !\is_array($value)) {
                 continue;
             }
             foreach ($value as $row) {
@@ -887,19 +885,19 @@ class Router
 
     private function middleware_class_find(string $class): string
     {
-        if(!isset($this->current_route) || \class_exists($class)){
+        if (!isset($this->current_route) || \class_exists($class)) {
             return $class;
         }
         $namespace = $this->current_route['options']['namespaces']['middleware'];
         $class_full_name = \rtrim($namespace, '\\') . '\\' . \ltrim($class, '\\');
-        if(\class_exists($class_full_name)){
+        if (\class_exists($class_full_name)) {
             return $class_full_name;
         }
-        if(!empty($this->current_route['options']['paths']['middleware'])){
+        if (!empty($this->current_route['options']['paths']['middleware'])) {
             $path = \rtrim($this->current_route['options']['paths']['middleware'], '/\\') . \DIRECTORY_SEPARATOR . \ltrim($class, '\\/') . '.php';
-            if(\is_file($path)){
+            if (\is_file($path)) {
                 require $path;
-                if(\class_exists($class_full_name)){
+                if (\class_exists($class_full_name)) {
                     return $class_full_name;
                 }
             }
@@ -909,44 +907,44 @@ class Router
 
     private function middleware_handle(array $filters, $arguments, int $pos): void
     {
-        if(empty($filters)){
+        if (empty($filters)) {
             return;
         }
         $run_filters = [];
         foreach ($filters as $filter) {
-            if(is_callable($filter)){
+            if (is_callable($filter)) {
                 $res = \call_user_func_array($filter, [$this->request, $this->response, $arguments]);
-            }else{
+            } else {
                 $filterClass = $this->middleware_class_find($filter);
-                if(\in_array($filterClass, $run_filters, true)) {
+                if (\in_array($filterClass, $run_filters, true)) {
                     continue;
                 }
                 $run_filters[] = $filterClass;
-                if(isset($this->filter_objects[$filterClass])){
+                if (isset($this->filter_objects[$filterClass])) {
                     $filter = $this->filter_objects[$filterClass];
-                }else{
+                } else {
                     $filter = $this->getClassContainer(new \ReflectionClass($filterClass));
                     $this->filter_objects[$filterClass] = $filter;
                 }
                 $method = $pos == self::BEFORE ? 'before' : 'after';
                 $res = \call_user_func_array([$filter, $method], [$this->request, $this->response, $arguments]);
             }
-            if($res instanceof ResponseInterface){
+            if ($res instanceof ResponseInterface) {
                 $this->response = $res;
                 $statusCode = (int)$res->getStatusCode();
-                if($statusCode < 200 || $statusCode > 299){
+                if ($statusCode < 200 || $statusCode > 299) {
                     break;
                 }
                 continue;
             }
-            if($res === null){
+            if ($res === null) {
                 exit;
             }
-            if(\is_object($filter)){
+            if (\is_object($filter)) {
                 $filter = \get_class($filter) . '::' . ($pos == self::BEFORE ? 'before()' : 'after()');
-            }elseif(\is_callable($filter)){
+            } elseif (\is_callable($filter)) {
                 $filter = '__CALLABLE__';
-            }else{
+            } else {
                 $filter = (string)$filter;
             }
             throw new RouterException('The "' . $filter . '" filter should return a \\Psr\\Http\\Message\\ResponseInterface or NULL.');
@@ -964,8 +962,8 @@ class Router
                     return $this->response = $this->response->withHeader('Content-Type', \mime_content_type($path))
                         ->withHeader('Content-Length', $size);
                 } else {
-                    @header("Content-Type: " . \mime_content_type($path) . ";");
-                    @header("Content-Length: " . $size . ";");
+                    @header('Content-Type: ' . \mime_content_type($path) . ';');
+                    @header('Content-Length: ' . $size . ';');
                     readfile($path);
                     exit;
                 }
@@ -978,16 +976,16 @@ class Router
         });
         $res = call_user_func_array($execute, $this->resolveParameters($reflection, $arguments));
         ob_end_clean();
-        if($res instanceof ResponseInterface){
+        if ($res instanceof ResponseInterface) {
             $this->response = $res;
             $res = null;
-        }elseif($res instanceof StreamInterface) {
+        } elseif ($res instanceof StreamInterface) {
             $this->response = $this->response->withBody($res);
             $res = null;
-        }else{
+        } else {
             $this->content .= (string)$res;
         }
-        if(!empty($this->content) && $this->response->getBody()->isWritable()){
+        if (!empty($this->content) && $this->response->getBody()->isWritable()) {
             $this->response->getBody()->write($this->content);
             $this->content = '';
         }
@@ -1001,37 +999,37 @@ class Router
         $getParameters = $reflector->getParameters();
         foreach ($getParameters as $parameter) {
             $class = null;
-            if(($type = $parameter->getType()) !== null){
+            if (($type = $parameter->getType()) !== null) {
                 $class = (!$type->isBuiltin()) ? new \ReflectionClass($type->getName()) : null;
             }
-            if($class === null){
-                if(isset($parameters[$i])){
+            if ($class === null) {
+                if (isset($parameters[$i])) {
                     $arguments[] = $parameters[$i];
                     ++$i;
                     continue;
                 }
-                if($parameter->isDefaultValueAvailable()){
+                if ($parameter->isDefaultValueAvailable()) {
                     $arguments[] = $parameter->getDefaultValue();
                     ++$i;
                     continue;
                 }
-                if($parameter->allowsNull()){
+                if ($parameter->allowsNull()) {
                     $arguments[] = null;
                     ++$i;
                 }
                 continue;
             }
             if (!$this->argumentNewInstance) {
-                if($class->isInstance($this->request)){
+                if ($class->isInstance($this->request)) {
                     $arguments[] = $this->request;
                     continue;
                 }
-                if($class->isInstance($this->response)){
+                if ($class->isInstance($this->response)) {
                     $arguments[] = $this->response;
                     continue;
                 }
             }
-            if($class->isInstantiable()){
+            if ($class->isInstantiable()) {
                 $arguments[] = $this->getClassContainer($class);
             }
         }
@@ -1041,38 +1039,38 @@ class Router
     private function getClassContainer(\ReflectionClass $class): object
     {
         if (!$this->argumentNewInstance) {
-            if($class->isInstance($this->request)){
+            if ($class->isInstance($this->request)) {
                 return $this->request;
             }
-            if($class->isInstance($this->response)){
+            if ($class->isInstance($this->response)) {
                 return $this->response;
             }
         }
-        if(isset($this->container) && is_object($this->container)){
+        if (isset($this->container) && is_object($this->container)) {
             return $this->container->get($class->getName());
         }
-        if(($constructor = $class->getConstructor()) === null){
+        if (($constructor = $class->getConstructor()) === null) {
             return $class->newInstance();
         }
         $parameters = $constructor->getParameters();
-        if(empty($parameters)){
+        if (empty($parameters)) {
             return $class->newInstance();
         }
         $arguments = [];
         foreach ($parameters as $parameter) {
-            if($parameter->isDefaultValueAvailable()){
+            if ($parameter->isDefaultValueAvailable()) {
                 $arguments[] = $parameter->getDefaultValue();
                 continue;
             }
-            if($parameter->hasType()){
-                if(($type = $parameter->getType()) !== null){
-                    if(!$type->isBuiltin()){
+            if ($parameter->hasType()) {
+                if (($type = $parameter->getType()) !== null) {
+                    if (!$type->isBuiltin()) {
                         $arguments[] = $this->getClassContainer(new \ReflectionClass($type->getName()));
                         continue;
                     }
                 }
             }
-            if($parameter->allowsNull()){
+            if ($parameter->allowsNull()) {
                 $arguments[] = null;
                 continue;
             }
@@ -1083,22 +1081,22 @@ class Router
 
     private function controllerFind($class): string
     {
-        if(\class_exists($class) || \is_object($class)){
+        if (\class_exists($class) || \is_object($class)) {
             return $class;
         }
 
-        if(empty($this->configs['namespaces']['controller'])){
+        if (empty($this->configs['namespaces']['controller'])) {
             throw new RouterException('"' . $class . '" controller not found.');
         }
         $controller = \rtrim($this->configs['namespaces']['controller'], '\\') . '\\' . \ltrim($class);
-        if(\class_exists($controller)){
+        if (\class_exists($controller)) {
             return $controller;
         }
-        if(!empty($this->configs['paths']['controller'])){
+        if (!empty($this->configs['paths']['controller'])) {
             $path = \rtrim($this->configs['paths']['controller'], '\\/') . \DIRECTORY_SEPARATOR . $class . '.php';
-            if(\is_file($path)){
+            if (\is_file($path)) {
                 require $path;
-                if(\class_exists($controller)){
+                if (\class_exists($controller)) {
                     return $controller;
                 }
             }
@@ -1108,13 +1106,13 @@ class Router
 
     private function getControllerMethod($execute, array $route_options = []): array
     {
-        if(is_array($execute)){
-            if(array_diff_key($execute, array_keys($execute))){
+        if (is_array($execute)) {
+            if (array_diff_key($execute, array_keys($execute))) {
                 $parse = [
                     'controller'    => key($execute),
                     'method'        => current($execute),
                 ];
-            }else{
+            } else {
                 $parse = [
                     'controller'        => $execute[0],
                     'method'            => $execute[1],
@@ -1123,21 +1121,21 @@ class Router
             return $parse;
         }
 
-        if(\is_string($execute)){
+        if (\is_string($execute)) {
             $split = false;
             foreach (['::', '@', '->'] as $separator) {
-                if(\strpos($execute, $separator) === FALSE){
+                if (\strpos($execute, $separator) === false) {
                     continue;
                 }
                 $split = \explode($separator, $execute, 2);
                 break;
             }
-            if($split === FALSE){
+            if ($split === false) {
                 throw new RouterException('The requested controller and method are not understood.');
             }
             return [
                 'controller'    => $split[0],
-                'method'        => $split[1]
+                'method'        => $split[1],
             ];
         }
 
@@ -1159,36 +1157,36 @@ class Router
     private function options_merge(array $array, array ...$arrays): array
     {
         $data = \array_merge_recursive($array, ...$arrays);
-        if(isset($data['as']) && \is_array($data['as'])){
+        if (isset($data['as']) && \is_array($data['as'])) {
             $data['as'] = \implode('', $data['as']);
         }
-        if(isset($data['prefix']) && \is_array($data['prefix'])){
+        if (isset($data['prefix']) && \is_array($data['prefix'])) {
             $data['prefix'] = \implode('', $data['prefix']);
         }
-        if(isset($data['base_path'])){
-            if(\is_array($data['base_path'])){
+        if (isset($data['base_path'])) {
+            if (\is_array($data['base_path'])) {
                 $data['base_path'] = \str_replace('//', '/', \trim(\implode('', $data['base_path']), '/'));
             }
-            if($data['base_path'] == '/'){
+            if ($data['base_path'] == '/') {
                 unset($data['base_path']);
             }
         }
-        if(isset($data['variable_method'])){
+        if (isset($data['variable_method'])) {
             unset($data['variable_method']);
         }
-        if(isset($data['namespaces'])){
-            if(isset($data['namespaces']['controller']) && \is_array($data['namespaces']['controller'])){
+        if (isset($data['namespaces'])) {
+            if (isset($data['namespaces']['controller']) && \is_array($data['namespaces']['controller'])) {
                 $data['namespaces']['controller'] = \str_replace('\\\\', '\\', \implode('\\', $data['namespaces']['controller']));
             }
-            if(isset($data['namespaces']['middleware']) && \is_array($data['namespaces']['middleware'])){
+            if (isset($data['namespaces']['middleware']) && \is_array($data['namespaces']['middleware'])) {
                 $data['namespaces']['middleware'] = \str_replace('\\\\', '\\', \implode('\\', $data['namespaces']['middleware']));
             }
         }
-        if(isset($data['paths'])){
-            if(isset($data['paths']['controller']) && \is_array($data['paths']['controller'])){
+        if (isset($data['paths'])) {
+            if (isset($data['paths']['controller']) && \is_array($data['paths']['controller'])) {
                 $data['paths']['controller'] = \str_replace('\\\\', '\\', \implode('\\', $data['paths']['controller']));
             }
-            if(isset($data['paths']['middleware']) && \is_array($data['paths']['middleware'])){
+            if (isset($data['paths']['middleware']) && \is_array($data['paths']['middleware'])) {
                 $data['paths']['middleware'] = \str_replace('\\\\', '\\', \implode('\\', $data['paths']['middleware']));
             }
         }
@@ -1197,9 +1195,9 @@ class Router
 
     private function register_methods_check($methods): array
     {
-        if(\is_array($methods)){
+        if (\is_array($methods)) {
             foreach ($methods as $method) {
-                if(!\in_array($method, self::SUPPORTED_METHODS)){
+                if (!\in_array($method, self::SUPPORTED_METHODS)) {
                     throw new InvalidArgumentException('The "' . (string)$method . '" method is not supported. Supported methods are: ' . \implode(', ', self::SUPPORTED_METHODS));
                 }
             }
@@ -1217,12 +1215,12 @@ class Router
 
     private function current_ip_boot(): void
     {
-        if(($ip = \getenv('HTTP_CLIENT_IP')) !== FALSE){
+        if (($ip = \getenv('HTTP_CLIENT_IP')) !== false) {
             $this->current_ip = $ip;
             return;
         }
-        if(($ip = \getenv('HTTP_X_FORWARDED_FOR')) !== FALSE){
-            if(\strstr($ip, ',')){
+        if (($ip = \getenv('HTTP_X_FORWARDED_FOR')) !== false) {
+            if (\strstr($ip, ',')) {
                 $parse = \explode(',', $ip, 2);
                 $ip = \trim($parse[0]);
             }
@@ -1235,11 +1233,11 @@ class Router
     private function current_method_boot(): void
     {
         $this->current_method = \strtoupper($this->request->getMethod());
-        if($this->configs['variable_method'] === FALSE || !isset($_REQUEST['_method'])){
+        if ($this->configs['variable_method'] === false || !isset($_REQUEST['_method'])) {
             return;
         }
         $method = \strtoupper($_REQUEST['_method']);
-        if(!\in_array($method, self::SUPPORTED_METHODS, true)){
+        if (!\in_array($method, self::SUPPORTED_METHODS, true)) {
             return;
         }
         $this->current_method = $method;
@@ -1247,27 +1245,27 @@ class Router
 
     protected function cache_start()
     {
-        if(!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === FALSE){
+        if (!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === false) {
             return;
         }
-        if(!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])){
+        if (!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])) {
             return;
         }
-        if(!\is_file($this->cache_configs['path'])){
+        if (!\is_file($this->cache_configs['path'])) {
             return;
         }
-        if(($read = @\file_get_contents($this->cache_configs['path'])) === FALSE){
+        if (($read = @\file_get_contents($this->cache_configs['path'])) === false) {
             throw new \Exception('Cannot read router cache file (' . $this->configs['cache']['path'] . ')');
         }
         $ttl = (int)($this->cache_configs['ttl'] ?? 86400);
         $data = \unserialize($read);
-        if(!isset($data['created_at'])){
+        if (!isset($data['created_at'])) {
             return;
         }
-        if(($data['created_at'] + $ttl) < \time()){
+        if (($data['created_at'] + $ttl) < \time()) {
             return;
         }
-        if(!isset($data['data'])){
+        if (!isset($data['data'])) {
             return;
         }
         $data = $data['data'];
@@ -1281,13 +1279,13 @@ class Router
 
     protected function cache_stop()
     {
-        if(!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === FALSE){
+        if (!isset($this->cache_configs['enable']) || $this->cache_configs['enable'] === false) {
             return;
         }
-        if(!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])){
+        if (!isset($this->cache_configs['path']) || empty($this->cache_configs['path'])) {
             return;
         }
-        if($this->cache_status !== FALSE){
+        if ($this->cache_status !== false) {
             return;
         }
         $data = [
@@ -1298,24 +1296,24 @@ class Router
                 'names'     => $this->names,
                 'methodIds' => $this->methodIds,
                 'error_404' => $this->error_404,
-            ]
+            ],
         ];
-        if(@\file_put_contents($this->cache_configs['path'], \serialize($data)) === FALSE){
+        if (@\file_put_contents($this->cache_configs['path'], \serialize($data)) === false) {
             throw new \Exception('Failed to create router cache file (' . $this->cache_configs['path'] . ').');
         }
     }
 
     private function confirm_ip_addresses($ip): array
     {
-        if(\is_string($ip)){
+        if (\is_string($ip)) {
             $ip = [$ip];
         }
-        if(!\is_array($ip)){
+        if (!\is_array($ip)) {
             throw new InvalidArgumentException('It can be just an IP address or a string of IP addresses.');
         }
         $res = [];
         foreach ($ip as $row) {
-            if(\filter_var($row, \FILTER_VALIDATE_IP) === FALSE){
+            if (\filter_var($row, \FILTER_VALIDATE_IP) === false) {
                 throw new InvalidArgumentException('It can be just an IP address or a string of IP addresses.');
             }
             $res[] = $row;
@@ -1326,17 +1324,17 @@ class Router
     private function notFound(): ResponseInterface
     {
         $this->response = $this->response->withStatus(404);
-        if(empty($this->error_404['execute'])){
+        if (empty($this->error_404['execute'])) {
             throw new PageNotFoundException('Error 404 : Page Not Found');
         }
-        if (!\defined("INITPHP_ROUTER_CURRENT_ARGUMENTS")) {
+        if (!\defined('INITPHP_ROUTER_CURRENT_ARGUMENTS')) {
             \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $this->error_404['options']['arguments']);
         }
-        if(\is_callable($this->error_404['execute'])){
-            if (!\defined("INITPHP_ROUTER_CURRENT_CONTROLLER")) {
+        if (\is_callable($this->error_404['execute'])) {
+            if (!\defined('INITPHP_ROUTER_CURRENT_CONTROLLER')) {
                 \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
             }
-            if (!\defined("INITPHP_ROUTER_CURRENT_METHOD")) {
+            if (!\defined('INITPHP_ROUTER_CURRENT_METHOD')) {
                 \define('INITPHP_ROUTER_CURRENT_METHOD', '');
             }
             return $this->response = $this->execute($this->error_404['execute'], $this->error_404['options']['arguments']);
@@ -1344,10 +1342,10 @@ class Router
         $parse = $this->getControllerMethod($this->error_404['execute'], $this->error_404['options']);
         $parse['controller'] = $this->controllerFind($parse['controller']);
         $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
-        if (!\defined("INITPHP_ROUTER_CURRENT_CONTROLLER")) {
+        if (!\defined('INITPHP_ROUTER_CURRENT_CONTROLLER')) {
             \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
         }
-        if (!\defined("INITPHP_ROUTER_CURRENT_METHOD")) {
+        if (!\defined('INITPHP_ROUTER_CURRENT_METHOD')) {
             \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
         }
 

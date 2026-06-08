@@ -2,7 +2,40 @@
     "name": "initphp/router",
     "description": "InitPHP HTTP Router Library",
     "type": "library",
+    "keywords": [
+        "router",
+        "routing",
+        "http",
+        "psr-7",
+        "psr-11",
+        "middleware",
+        "initphp"
+    ],
+    "homepage": "https://github.com/InitPHP/Router",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Muhammet ŞAFAK",
+            "email": "info@muhammetsafak.com.tr",
+            "role": "Developer",
+            "homepage": "https://www.muhammetsafak.com.tr"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/InitPHP/Router/issues",
+        "source": "https://github.com/InitPHP/Router"
+    },
+    "require": {
+        "php": ">=8.1",
+        "psr/container": "^1.1 || ^2.0",
+        "psr/http-message": "^1.1 || ^2.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "initphp/http": "^2.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^9.6"
+    },
     "autoload": {
         "psr-4": {
             "InitPHP\\Router\\": "src/"
@@ -13,21 +46,16 @@
             "Tests\\Router\\": "tests/"
         }
     },
-    "authors": [
-        {
-            "name": "Muhammet ŞAFAK",
-            "email": "info@muhammetsafak.com.tr",
-            "role": "Developer",
-            "homepage": "https://www.muhammetsafak.com.tr"
-        }
-    ],
-    "minimum-stability": "stable",
-    "require": {
-        "php": ">=7.2",
-        "psr/http-message": "^1.0"
+    "scripts": {
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text --coverage-html build/coverage",
+        "phpstan": "phpstan analyse",
+        "cs:check": "php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "php-cs-fixer fix"
     },
-    "require-dev": {
-        "phpunit/phpunit": "9.5",
-        "initphp/http": "^2.0"
-    }
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
