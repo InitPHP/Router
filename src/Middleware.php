@@ -27,7 +27,7 @@ abstract class Middleware
      *
      * @param RequestInterface $request <p>The request object used.</p>
      * @param ResponseInterface $response <p>The response object used.</p>
-     * @param array $arguments <p>Array holding the route's arguments, if any.</p>
+     * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
      * @return ResponseInterface|null <p>
      * It should return the response object to be used afterwards. Otherwise, an exception is thrown.
      * If null is returned, the "exit" command will completely stop the script from running.
@@ -42,7 +42,7 @@ abstract class Middleware
      *
      * @param RequestInterface $request <p>The request object used.</p>
      * @param ResponseInterface $response <p>The response object used.</p>
-     * @param array $arguments <p>Array holding the route's arguments, if any.</p>
+     * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
      * @return ResponseInterface|null <p>
      * It should return the response object to be used afterwards. Otherwise, an exception is thrown.
      * If null is returned, the "exit" command will completely stop the script from running.

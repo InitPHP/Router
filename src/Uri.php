@@ -23,23 +23,22 @@ use InitPHP\Router\Exception\InvalidArgumentException;
  */
 final class Uri
 {
-    protected $scheme = '';
+    protected string $scheme = '';
 
-    protected $userInfo = '';
+    protected string $userInfo = '';
 
-    protected $host = '';
+    protected string $host = '';
 
-    /** @var null|int */
-    protected $port = null;
+    protected ?int $port = null;
 
-    protected $path = '';
+    protected string $path = '';
 
     public function __construct(string $url)
     {
         $this->boot($url);
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return ($this->scheme !== '' ? $this->scheme . ':' : '')
             . '//'
@@ -59,7 +58,7 @@ final class Uri
         return $this;
     }
 
-    public function withHost($host): self
+    public function withHost(string $host): self
     {
         $host = \strtolower($host);
         if ($host === $this->host) {
@@ -75,13 +74,13 @@ final class Uri
         return $this;
     }
 
-    public function withPath($path): self
+    public function withPath(string $path): self
     {
         $this->path = $path;
         return $this;
     }
 
-    public function boot(string $url)
+    public function boot(string $url): void
     {
         if ($url === '') {
             return;
