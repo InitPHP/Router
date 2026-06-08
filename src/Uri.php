@@ -93,7 +93,7 @@ final class Uri
         $this->userInfo = $parse['user'] ?? '';
         $this->host = isset($parse['host']) ? \strtolower($parse['host']) : '';
 
-        if (isset($parse['port']) && ($parse['port'] != 80 || $parse['port'] != 443)) {
+        if (isset($parse['port']) && $parse['port'] !== 80 && $parse['port'] !== 443) {
             $this->port = $parse['port'];
         }
         $this->path = $parse['path'] ?? '/';

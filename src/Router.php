@@ -125,6 +125,15 @@ class Router
     private $filter_objects = [];
     private $content = '';
 
+    /** @var string|null Class name of the controller handling the current route, or '__CALLABLE__' for closures. */
+    private ?string $currentController = null;
+
+    /** @var string|null Method name handling the current route, or '' for closures. */
+    private ?string $currentControllerMethod = null;
+
+    /** @var array<int, mixed> Arguments extracted from the current route. */
+    private array $currentArguments = [];
+
     public function __construct(RequestInterface $request, ResponseInterface $response, array $configs = [])
     {
         if (isset($configs['container'])) {
@@ -202,7 +211,42 @@ class Router
                 'arguments' => [],
             ],
         ];
+        $this->currentController = null;
+        $this->currentControllerMethod = null;
+        $this->currentArguments = [];
         unset($this->current_route, $this->current_url, $this->current_method, $this->current_ip);
+    }
+
+    /**
+     * Returns the controller class that handled the current route.
+     *
+     * @return string|null The controller class name, '__CALLABLE__' when a
+     * closure handled the route, or null before dispatch().
+     */
+    public function getCurrentController(): ?string
+    {
+        return $this->currentController;
+    }
+
+    /**
+     * Returns the controller method that handled the current route.
+     *
+     * @return string|null The method name, an empty string when a closure
+     * handled the route, or null before dispatch().
+     */
+    public function getCurrentControllerMethod(): ?string
+    {
+        return $this->currentControllerMethod;
+    }
+
+    /**
+     * Returns the arguments extracted from the current route.
+     *
+     * @return array<int, mixed>
+     */
+    public function getCurrentArguments(): array
+    {
+        return $this->currentArguments;
     }
 
     /**
@@ -235,7 +279,7 @@ class Router
         $path = (isset($options['base_path']) && $options['base_path'] != '/' ? \rtrim($options['base_path'], '/') . '/' : '')
             . ($options['prefix'] ?? '')
             . $path;
-        $path = \str_replace(['//', '///'], '/', $path);
+        $path = (string)\preg_replace('#/{2,}#', '/', $path);
 
         $uri = clone $this->uri;
         $uri->withPath($path);
@@ -705,7 +749,7 @@ class Router
 
         $route = $this->current_route;
         $arguments = $route['arguments'] ?? [];
-        \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $arguments);
+        $this->currentArguments = $arguments;
 
         $filters = [
             'before'    => [],
@@ -734,8 +778,8 @@ class Router
             return $this->execute($route['execute'], $arguments, self::LINK);
         } else {
             if (\is_callable($route['execute'])) {
-                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
-                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
+                $this->currentController = '__CALLABLE__';
+                $this->currentControllerMethod = '';
                 $this->response = $this->execute($route['execute'], $arguments);
             } else {
                 $parse = $this->getControllerMethod($route['execute'], $route['options']);
@@ -743,8 +787,8 @@ class Router
                 $reflection = new \ReflectionClass($parse['controller']);
                 $controller = $this->getClassContainer($reflection);
                 $this->middleware_handle($this->controller_middlewares_property($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
-                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
-                \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
+                $this->currentController = \get_class($controller);
+                $this->currentControllerMethod = $parse['method'];
                 $responseStatusCode = (int)$this->response->getStatusCode();
                 if ($responseStatusCode < 200 || $responseStatusCode > 299) {
                     return $this->response;
@@ -777,11 +821,9 @@ class Router
         $matches = [];
         foreach ($routes as $id) {
             $route = $this->routes[$id];
-            if (isset($route['options']['ip']) && !empty($route['options']['ip'])) {
-                if (\is_array($route['options']['ip']) && !\in_array($this->current_ip, $route['options']['ip'], true)) {
-                    continue;
-                }
-                if ($route['options']['ip'] != $this->current_ip) {
+            if (!empty($route['options']['ip'])) {
+                $allowedIps = \is_array($route['options']['ip']) ? $route['options']['ip'] : [$route['options']['ip']];
+                if (!\in_array($this->current_ip, $allowedIps, true)) {
                     continue;
                 }
             }
@@ -790,7 +832,11 @@ class Router
                 \array_shift($arguments);
                 $route['arguments'] = $arguments;
                 if ($route['methods'] === ['LINK']) {
-                    return $this->current_method = $route;
+                    if ($this->linkServePath((string)$route['execute'], $arguments) === null) {
+                        // No file behind the link (missing or escaping the root): let it 404.
+                        continue;
+                    }
+                    return $this->current_route = $route;
                 }
                 $matches_size = \strlen($route['path']);
                 if (\is_array($arguments) && !empty($arguments)) {
@@ -951,24 +997,57 @@ class Router
         }
     }
 
+    /**
+     * Resolves the real file a LINK route should serve, or null when there is
+     * nothing safe to serve.
+     *
+     * For directory links the captured suffix is appended to the source root
+     * and the resolved real path is verified to stay inside that root, which
+     * prevents path-traversal (e.g. "../secret"). For file links the source is
+     * returned as-is when it still exists.
+     *
+     * @param string $source The link source (a directory or a file).
+     * @param array<int, mixed> $arguments The matched route arguments.
+     * @return string|null The absolute file path to serve, or null.
+     */
+    private function linkServePath(string $source, array $arguments): ?string
+    {
+        if (\is_dir($source)) {
+            if (($root = \realpath($source)) === false) {
+                return null;
+            }
+            $suffix = isset($arguments[0]) ? \ltrim((string)$arguments[0], '/\\') : '';
+            $target = \realpath($root . \DIRECTORY_SEPARATOR . $suffix);
+            if ($target === false || !\is_file($target)) {
+                return null;
+            }
+            if ($target !== $root && \strncmp($target, $root . \DIRECTORY_SEPARATOR, \strlen($root) + 1) !== 0) {
+                return null;
+            }
+            return $target;
+        }
+
+        return \is_file($source) ? $source : null;
+    }
+
     private function execute($execute, array $arguments, int $type = self::ROUTE): ResponseInterface
     {
         if ($type === self::LINK) {
-            $path = $execute
-                . ($arguments[0] ?? '');
-            if (\is_file($path)) {
-                if (($size = \filesize($path)) < 2097152) {
-                    $this->response->getBody()->write(@\file_get_contents($path));
-                    return $this->response = $this->response->withHeader('Content-Type', \mime_content_type($path))
-                        ->withHeader('Content-Length', $size);
-                } else {
-                    @header('Content-Type: ' . \mime_content_type($path) . ';');
-                    @header('Content-Length: ' . $size . ';');
-                    readfile($path);
-                    exit;
-                }
+            $path = $this->linkServePath(\is_string($execute) ? $execute : '', $arguments);
+            if ($path === null) {
+                return $this->notFound();
             }
-            return $this->notFound();
+            $size = (int)\filesize($path);
+            $mime = (string)\mime_content_type($path);
+            if ($size < 2097152) {
+                $this->response->getBody()->write((string)@\file_get_contents($path));
+                return $this->response = $this->response->withHeader('Content-Type', $mime)
+                    ->withHeader('Content-Length', (string)$size);
+            }
+            @\header('Content-Type: ' . $mime . ';');
+            @\header('Content-Length: ' . $size . ';');
+            \readfile($path);
+            exit;
         }
         $reflection = is_array($execute) ? new \ReflectionMethod($execute[0], $execute[1]) : new \ReflectionFunction($execute);
         ob_start(function ($tmp) {
@@ -1088,7 +1167,7 @@ class Router
         if (empty($this->configs['namespaces']['controller'])) {
             throw new RouterException('"' . $class . '" controller not found.');
         }
-        $controller = \rtrim($this->configs['namespaces']['controller'], '\\') . '\\' . \ltrim($class);
+        $controller = \rtrim($this->configs['namespaces']['controller'], '\\') . '\\' . \ltrim($class, '\\');
         if (\class_exists($controller)) {
             return $controller;
         }
@@ -1255,7 +1334,7 @@ class Router
             return;
         }
         if (($read = @\file_get_contents($this->cache_configs['path'])) === false) {
-            throw new \Exception('Cannot read router cache file (' . $this->configs['cache']['path'] . ')');
+            throw new RouterException('Cannot read router cache file (' . $this->cache_configs['path'] . ')');
         }
         $ttl = (int)($this->cache_configs['ttl'] ?? 86400);
         $data = \unserialize($read);
@@ -1298,8 +1377,13 @@ class Router
                 'error_404' => $this->error_404,
             ],
         ];
+        // Invoked from __destruct(); a failed write must never throw here, as
+        // exceptions raised during destruction are fatal. Report and move on.
         if (@\file_put_contents($this->cache_configs['path'], \serialize($data)) === false) {
-            throw new \Exception('Failed to create router cache file (' . $this->cache_configs['path'] . ').');
+            \trigger_error(
+                'Failed to create router cache file (' . $this->cache_configs['path'] . ').',
+                \E_USER_WARNING
+            );
         }
     }
 
@@ -1327,27 +1411,17 @@ class Router
         if (empty($this->error_404['execute'])) {
             throw new PageNotFoundException('Error 404 : Page Not Found');
         }
-        if (!\defined('INITPHP_ROUTER_CURRENT_ARGUMENTS')) {
-            \define('INITPHP_ROUTER_CURRENT_ARGUMENTS', $this->error_404['options']['arguments']);
-        }
+        $this->currentArguments = $this->error_404['options']['arguments'];
         if (\is_callable($this->error_404['execute'])) {
-            if (!\defined('INITPHP_ROUTER_CURRENT_CONTROLLER')) {
-                \define('INITPHP_ROUTER_CURRENT_CONTROLLER', '__CALLABLE__');
-            }
-            if (!\defined('INITPHP_ROUTER_CURRENT_METHOD')) {
-                \define('INITPHP_ROUTER_CURRENT_METHOD', '');
-            }
+            $this->currentController = '__CALLABLE__';
+            $this->currentControllerMethod = '';
             return $this->response = $this->execute($this->error_404['execute'], $this->error_404['options']['arguments']);
         }
         $parse = $this->getControllerMethod($this->error_404['execute'], $this->error_404['options']);
         $parse['controller'] = $this->controllerFind($parse['controller']);
         $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
-        if (!\defined('INITPHP_ROUTER_CURRENT_CONTROLLER')) {
-            \define('INITPHP_ROUTER_CURRENT_CONTROLLER', \get_class($controller));
-        }
-        if (!\defined('INITPHP_ROUTER_CURRENT_METHOD')) {
-            \define('INITPHP_ROUTER_CURRENT_METHOD', $parse['method']);
-        }
+        $this->currentController = \get_class($controller);
+        $this->currentControllerMethod = $parse['method'];
 
         return $this->response = $this->execute([$controller, $parse['method']], $this->error_404['options']['arguments']);
     }
