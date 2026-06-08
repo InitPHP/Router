@@ -16,7 +16,13 @@ declare(strict_types=1);
 
 namespace InitPHP\Router;
 
+use InitPHP\Router\Cache\RouteCache;
 use InitPHP\Router\Exception\{InvalidArgumentException, PageNotFoundException, RouterException};
+use InitPHP\Router\Http\RequestContext;
+use InitPHP\Router\Link\FileLinkHandler;
+use InitPHP\Router\Matching\PatternRegistry;
+use InitPHP\Router\Resolver\ControllerResolver;
+use InitPHP\Router\Resolver\ParameterResolver;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\{RequestInterface, ResponseInterface, StreamInterface};
 
@@ -61,34 +67,15 @@ class Router
 
     protected bool $argumentNewInstance = false;
 
-    /** @var array<string, string> */
-    protected array $patterns = [
-        '{[^/]+}'           => '([^/]+)',
-        ':any[0-9]?'        => '([^/]+)',
-        '{any[0-9]?}'       => '([^/]+)',
-        ':id[0-9]?'         => '(\d+)',
-        '{id[0-9]?}'        => '(\d+)',
-        ':int[0-9]?'        => '(\d+)',
-        '{int[0-9]?}'       => '(\d+)',
-        ':number[0-9]?'     => '([+-]?([0-9]*[.])?[0-9]+)',
-        '{number[0-9]?}'    => '([+-]?([0-9]*[.])?[0-9]+)',
-        ':float[0-9]?'      => '([+-]?([0-9]*[.])?[0-9]+)',
-        '{float[0-9]?}'     => '([+-]?([0-9]*[.])?[0-9]+)',
-        ':bool[0-9]?'       => '(true|false|1|0)',
-        '{bool[0-9]?}'      => '(true|false|1|0)',
-        ':string[0-9]?'     => '([\w\-_]+)',
-        '{string[0-9]?}'    => '([\w\-_]+)',
-        ':slug[0-9]?'       => '([\w\-_]+)',
-        '{slug[0-9]?}'      => '([\w\-_]+)',
-        ':uuid[0-9]?'       => '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})',
-        '{uuid[0-9]?}'      => '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})',
-        ':date[0-9]?'       => '([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1]))',
-        '{date[0-9]?}'      => '([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1]))',
-        ':locale'           => '([A-Za-z]{2}|[A-Za-z]{2}[\_\-]{1}[A-Za-z]{2})',
-        '{locale}'          => '([A-Za-z]{2}|[A-Za-z]{2}[\_\-]{1}[A-Za-z]{2})',
-        ':everything'       => '(.*)',
-        '{everything}'      => '(.*)',
-    ];
+    protected PatternRegistry $patternRegistry;
+
+    protected ControllerResolver $controllerResolver;
+
+    protected ParameterResolver $parameterResolver;
+
+    protected FileLinkHandler $fileLinkHandler;
+
+    protected RouteCache $cache;
 
     protected RequestInterface $request;
 
@@ -158,16 +145,34 @@ class Router
         unset($this->configs['argument_new_instance']);
         $this->request = $request;
         $this->response = $response;
+        $this->patternRegistry = new PatternRegistry();
+        $this->fileLinkHandler = new FileLinkHandler();
+        $this->controllerResolver = new ControllerResolver(
+            \is_string($this->configs['namespaces']['controller'] ?? null) ? $this->configs['namespaces']['controller'] : null,
+            \is_string($this->configs['paths']['controller'] ?? null) ? $this->configs['paths']['controller'] : null
+        );
+        $this->parameterResolver = new ParameterResolver(
+            $this->request,
+            $this->response,
+            $this->argumentNewInstance,
+            $this->container
+        );
         $this->uri = new Uri($this->request->getUri()->__toString());
 
         $this->currentUrl = $this->uri->__toString();
-        $this->currentIpBoot();
-        $this->currentMethodBoot();
+        $context = new RequestContext(
+            $this->request,
+            (bool) $this->configs['variable_method'],
+            self::SUPPORTED_METHODS
+        );
+        $this->currentMethod = $context->getMethod();
+        $this->currentIp = $context->getClientIp();
 
         foreach (self::SUPPORTED_METHODS as $method) {
             $this->methodIds[$method] = [];
         }
 
+        $this->cache = new RouteCache($this->cacheConfigs);
         $this->cacheStart();
     }
 
@@ -586,7 +591,7 @@ class Router
         }
         $prefix = \trim($prefix, '/');
         $name_prefix = \str_replace('/', '.', $prefix);
-        $controller = $this->controllerFind($controller);
+        $controller = (string) $this->controllerResolver->find($controller);
 
         $this->register(['GET'], ('/' . $prefix), ($controller . '::index'), ['name' => ($name_prefix . '.index')])
             ->register(['GET'], ('/' . $prefix . '/create'), ($controller . '::create'), ['name' => ($name_prefix . '.create')])
@@ -733,12 +738,7 @@ class Router
      */
     public function pattern(string $key, string $pattern): self
     {
-        $key = \trim($key, ':{}');
-        if (\substr($pattern, 0, 1) != '(' && \substr($pattern, -1) != ')') {
-            $pattern = '(' . $pattern . ')';
-        }
-        $this->patterns[':' . $key] = $pattern;
-        $this->patterns['{' . $key . '}'] = $pattern;
+        $this->patternRegistry->add($key, $pattern);
         return $this;
     }
 
@@ -808,10 +808,10 @@ class Router
                 $this->currentControllerMethod = '';
                 $this->response = $this->execute($route['execute'], $arguments);
             } else {
-                $parse = $this->getControllerMethod($route['execute'], $route['options']);
-                $parse['controller'] = $this->controllerFind($parse['controller']);
+                $parse = $this->controllerResolver->parse($route['execute']);
+                $parse['controller'] = $this->controllerResolver->find($parse['controller']);
                 $reflection = new \ReflectionClass($parse['controller']);
-                $controller = $this->getClassContainer($reflection);
+                $controller = $this->parameterResolver->make($reflection);
                 $this->middlewareHandle($this->controllerMiddlewaresProperty($controller, $parse['method'], self::BEFORE), $arguments, self::BEFORE);
                 $this->currentController = \get_class($controller);
                 $this->currentControllerMethod = $parse['method'];
@@ -843,7 +843,7 @@ class Router
         $this->currentMethod = $method = \strtoupper($method);
 
         $routes = \array_unique(\array_merge($this->methodIds['LINK'], $this->methodIds['ANY'], $this->methodIds[$method]));
-        $patterns = $this->getPatterns();
+        $patterns = $this->patternRegistry->compiled();
         $matches = [];
         foreach ($routes as $id) {
             $route = $this->routes[$id];
@@ -858,7 +858,7 @@ class Router
                 \array_shift($arguments);
                 $route['arguments'] = $arguments;
                 if ($route['methods'] === ['LINK']) {
-                    if ($this->linkServePath((string)$route['execute'], $arguments) === null) {
+                    if ($this->fileLinkHandler->resolve((string) $route['execute'], $arguments) === null) {
                         // No file behind the link (missing or escaping the root): let it 404.
                         continue;
                     }
@@ -995,7 +995,7 @@ class Router
                 if (isset($this->filterObjects[$filterClass])) {
                     $filter = $this->filterObjects[$filterClass];
                 } else {
-                    $filter = $this->getClassContainer(new \ReflectionClass($filterClass));
+                    $filter = $this->parameterResolver->make(new \ReflectionClass($filterClass));
                     $this->filterObjects[$filterClass] = $filter;
                 }
                 $method = $pos == self::BEFORE ? 'before' : 'after';
@@ -1036,50 +1036,25 @@ class Router
      * @param array<int, mixed> $arguments The matched route arguments.
      * @return string|null The absolute file path to serve, or null.
      */
-    private function linkServePath(string $source, array $arguments): ?string
-    {
-        if (\is_dir($source)) {
-            if (($root = \realpath($source)) === false) {
-                return null;
-            }
-            $suffix = isset($arguments[0]) ? \ltrim((string)$arguments[0], '/\\') : '';
-            $target = \realpath($root . \DIRECTORY_SEPARATOR . $suffix);
-            if ($target === false || !\is_file($target)) {
-                return null;
-            }
-            if ($target !== $root && \strncmp($target, $root . \DIRECTORY_SEPARATOR, \strlen($root) + 1) !== 0) {
-                return null;
-            }
-            return $target;
-        }
-
-        return \is_file($source) ? $source : null;
-    }
-
     private function execute($execute, array $arguments, int $type = self::ROUTE): ResponseInterface
     {
         if ($type === self::LINK) {
-            $path = $this->linkServePath(\is_string($execute) ? $execute : '', $arguments);
-            if ($path === null) {
+            $served = $this->fileLinkHandler->serve(
+                \is_string($execute) ? $execute : '',
+                $arguments,
+                $this->response
+            );
+            if ($served === null) {
                 return $this->notFound();
             }
-            $size = (int)\filesize($path);
-            $mime = (string)\mime_content_type($path);
-            if ($size < 2097152) {
-                $this->response->getBody()->write((string)@\file_get_contents($path));
-                return $this->response = $this->response->withHeader('Content-Type', $mime)
-                    ->withHeader('Content-Length', (string)$size);
-            }
-            @\header('Content-Type: ' . $mime . ';');
-            @\header('Content-Length: ' . $size . ';');
-            \readfile($path);
-            exit;
+
+            return $this->response = $served;
         }
         $reflection = is_array($execute) ? new \ReflectionMethod($execute[0], $execute[1]) : new \ReflectionFunction($execute);
         ob_start(function ($tmp) {
             $this->content .= $tmp;
         });
-        $res = call_user_func_array($execute, $this->resolveParameters($reflection, $arguments));
+        $res = call_user_func_array($execute, $this->parameterResolver->forReflection($reflection, $arguments));
         ob_end_clean();
         if ($res instanceof ResponseInterface) {
             $this->response = $res;
@@ -1095,168 +1070,6 @@ class Router
             $this->content = '';
         }
         return $this->response;
-    }
-
-    private function resolveParameters(\Reflector $reflector, array $parameters): array
-    {
-        $arguments = [];
-        $i = 0;
-        $getParameters = $reflector->getParameters();
-        foreach ($getParameters as $parameter) {
-            $class = null;
-            if (($type = $parameter->getType()) !== null) {
-                $class = (!$type->isBuiltin()) ? new \ReflectionClass($type->getName()) : null;
-            }
-            if ($class === null) {
-                if (isset($parameters[$i])) {
-                    $arguments[] = $parameters[$i];
-                    ++$i;
-                    continue;
-                }
-                if ($parameter->isDefaultValueAvailable()) {
-                    $arguments[] = $parameter->getDefaultValue();
-                    ++$i;
-                    continue;
-                }
-                if ($parameter->allowsNull()) {
-                    $arguments[] = null;
-                    ++$i;
-                }
-                continue;
-            }
-            if (!$this->argumentNewInstance) {
-                if ($class->isInstance($this->request)) {
-                    $arguments[] = $this->request;
-                    continue;
-                }
-                if ($class->isInstance($this->response)) {
-                    $arguments[] = $this->response;
-                    continue;
-                }
-            }
-            if ($class->isInstantiable()) {
-                $arguments[] = $this->getClassContainer($class);
-            }
-        }
-        return $arguments;
-    }
-
-    private function getClassContainer(\ReflectionClass $class): object
-    {
-        if (!$this->argumentNewInstance) {
-            if ($class->isInstance($this->request)) {
-                return $this->request;
-            }
-            if ($class->isInstance($this->response)) {
-                return $this->response;
-            }
-        }
-        if (isset($this->container) && is_object($this->container)) {
-            return $this->container->get($class->getName());
-        }
-        if (($constructor = $class->getConstructor()) === null) {
-            return $class->newInstance();
-        }
-        $parameters = $constructor->getParameters();
-        if (empty($parameters)) {
-            return $class->newInstance();
-        }
-        $arguments = [];
-        foreach ($parameters as $parameter) {
-            if ($parameter->isDefaultValueAvailable()) {
-                $arguments[] = $parameter->getDefaultValue();
-                continue;
-            }
-            if ($parameter->hasType()) {
-                if (($type = $parameter->getType()) !== null) {
-                    if (!$type->isBuiltin()) {
-                        $arguments[] = $this->getClassContainer(new \ReflectionClass($type->getName()));
-                        continue;
-                    }
-                }
-            }
-            if ($parameter->allowsNull()) {
-                $arguments[] = null;
-                continue;
-            }
-            throw new RouterException('Unable to resolve parameter "'.$parameter->getName().'" of class "'.$class->getName().'".');
-        }
-        return $class->newInstanceArgs($arguments);
-    }
-
-    private function controllerFind($class): string
-    {
-        if (\class_exists($class) || \is_object($class)) {
-            return $class;
-        }
-
-        if (empty($this->configs['namespaces']['controller'])) {
-            throw new RouterException('"' . $class . '" controller not found.');
-        }
-        $controller = \rtrim($this->configs['namespaces']['controller'], '\\') . '\\' . \ltrim($class, '\\');
-        if (\class_exists($controller)) {
-            return $controller;
-        }
-        if (!empty($this->configs['paths']['controller'])) {
-            $path = \rtrim($this->configs['paths']['controller'], '\\/') . \DIRECTORY_SEPARATOR . $class . '.php';
-            if (\is_file($path)) {
-                require $path;
-                if (\class_exists($controller)) {
-                    return $controller;
-                }
-            }
-        }
-        throw new RouterException('"' . $controller . '" controller not found.');
-    }
-
-    private function getControllerMethod($execute, array $route_options = []): array
-    {
-        if (is_array($execute)) {
-            if (array_diff_key($execute, array_keys($execute))) {
-                $parse = [
-                    'controller'    => key($execute),
-                    'method'        => current($execute),
-                ];
-            } else {
-                $parse = [
-                    'controller'        => $execute[0],
-                    'method'            => $execute[1],
-                ];
-            }
-            return $parse;
-        }
-
-        if (\is_string($execute)) {
-            $split = false;
-            foreach (['::', '@', '->'] as $separator) {
-                if (\strpos($execute, $separator) === false) {
-                    continue;
-                }
-                $split = \explode($separator, $execute, 2);
-                break;
-            }
-            if ($split === false) {
-                throw new RouterException('The requested controller and method are not understood.');
-            }
-            return [
-                'controller'    => $split[0],
-                'method'        => $split[1],
-            ];
-        }
-
-        throw new RouterException('The requested controller and method are not understood.');
-    }
-
-    private function getPatterns(): array
-    {
-        $res = ['keys' => [], 'values' => []];
-        foreach ($this->patterns as $key => $value) {
-            $res['keys'][] = '#' . $key . '#';
-            $res['values'][] = $value;
-        }
-        $res['keys'][] = '#{[A-Za-z0-9]+}#';
-        $res['values'][] = '([\w\-_]+)';
-        return $res;
     }
 
     private function optionsMerge(array $array, array ...$arrays): array
@@ -1318,62 +1131,11 @@ class Router
         }
     }
 
-    private function currentIpBoot(): void
-    {
-        if (($ip = \getenv('HTTP_CLIENT_IP')) !== false) {
-            $this->currentIp = $ip;
-            return;
-        }
-        if (($ip = \getenv('HTTP_X_FORWARDED_FOR')) !== false) {
-            if (\strstr($ip, ',')) {
-                $parse = \explode(',', $ip, 2);
-                $ip = \trim($parse[0]);
-            }
-            $this->currentIp = $ip;
-            return;
-        }
-        $this->currentIp = ($_SERVER['REMOTE_ADDR'] ?? null);
-    }
-
-    private function currentMethodBoot(): void
-    {
-        $this->currentMethod = \strtoupper($this->request->getMethod());
-        if ($this->configs['variable_method'] === false || !isset($_REQUEST['_method'])) {
-            return;
-        }
-        $method = \strtoupper($_REQUEST['_method']);
-        if (!\in_array($method, self::SUPPORTED_METHODS, true)) {
-            return;
-        }
-        $this->currentMethod = $method;
-    }
-
     protected function cacheStart(): void
     {
-        if (!isset($this->cacheConfigs['enable']) || $this->cacheConfigs['enable'] === false) {
+        if (($data = $this->cache->load()) === null) {
             return;
         }
-        if (!isset($this->cacheConfigs['path']) || empty($this->cacheConfigs['path'])) {
-            return;
-        }
-        if (!\is_file($this->cacheConfigs['path'])) {
-            return;
-        }
-        if (($read = @\file_get_contents($this->cacheConfigs['path'])) === false) {
-            throw new RouterException('Cannot read router cache file (' . $this->cacheConfigs['path'] . ')');
-        }
-        $ttl = (int)($this->cacheConfigs['ttl'] ?? 86400);
-        $data = \unserialize($read);
-        if (!isset($data['created_at'])) {
-            return;
-        }
-        if (($data['created_at'] + $ttl) < \time()) {
-            return;
-        }
-        if (!isset($data['data'])) {
-            return;
-        }
-        $data = $data['data'];
         $this->routes = $data['routes'];
         $this->names = $data['names'];
         $this->methodIds = $data['methodIds'];
@@ -1384,33 +1146,16 @@ class Router
 
     protected function cacheStop(): void
     {
-        if (!isset($this->cacheConfigs['enable']) || $this->cacheConfigs['enable'] === false) {
-            return;
-        }
-        if (!isset($this->cacheConfigs['path']) || empty($this->cacheConfigs['path'])) {
-            return;
-        }
         if ($this->cacheStatus !== false) {
             return;
         }
-        $data = [
-            'created_at'    => \time(),
-            'data'          => [
-                'id'        => $this->id,
-                'routes'    => $this->routes,
-                'names'     => $this->names,
-                'methodIds' => $this->methodIds,
-                'error_404' => $this->error404,
-            ],
-        ];
-        // Invoked from __destruct(); a failed write must never throw here, as
-        // exceptions raised during destruction are fatal. Report and move on.
-        if (@\file_put_contents($this->cacheConfigs['path'], \serialize($data)) === false) {
-            \trigger_error(
-                'Failed to create router cache file (' . $this->cacheConfigs['path'] . ').',
-                \E_USER_WARNING
-            );
-        }
+        $this->cache->save([
+            'id'        => $this->id,
+            'routes'    => $this->routes,
+            'names'     => $this->names,
+            'methodIds' => $this->methodIds,
+            'error_404' => $this->error404,
+        ]);
     }
 
     private function confirmIpAddresses($ip): array
@@ -1443,9 +1188,9 @@ class Router
             $this->currentControllerMethod = '';
             return $this->response = $this->execute($this->error404['execute'], $this->error404['options']['arguments']);
         }
-        $parse = $this->getControllerMethod($this->error404['execute'], $this->error404['options']);
-        $parse['controller'] = $this->controllerFind($parse['controller']);
-        $controller = $this->getClassContainer(new \ReflectionClass($parse['controller']));
+        $parse = $this->controllerResolver->parse($this->error404['execute']);
+        $parse['controller'] = $this->controllerResolver->find($parse['controller']);
+        $controller = $this->parameterResolver->make(new \ReflectionClass($parse['controller']));
         $this->currentController = \get_class($controller);
         $this->currentControllerMethod = $parse['method'];
 

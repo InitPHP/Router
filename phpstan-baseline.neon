@@ -1,31 +1,109 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 2
+			path: src/Cache/RouteCache.php
+
+		-
+			message: '#^Method InitPHP\\Router\\Cache\\RouteCache\:\:load\(\) should return array\<string, mixed\>\|null but returns array\<mixed, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Cache/RouteCache.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 4
+			path: src/Http/RequestContext.php
+
+		-
+			message: '#^Parameter \#1 \$serverParams of method InitPHP\\Router\\Http\\RequestContext\:\:detectClientIp\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Http/RequestContext.php
+
+		-
+			message: '#^Parameter \#4 \$requestParams of method InitPHP\\Router\\Http\\RequestContext\:\:detectMethod\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Http/RequestContext.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: src/Link/FileLinkHandler.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: src/Resolver/ControllerResolver.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 1
+			path: src/Resolver/ControllerResolver.php
+
+		-
+			message: '#^Method InitPHP\\Router\\Resolver\\ControllerResolver\:\:parse\(\) should return array\{controller\: object\|string, method\: string\} but returns array\{controller\: mixed, method\: string\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Resolver/ControllerResolver.php
+
+		-
+			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Resolver/ParameterResolver.php
+
+		-
 			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
-			count: 2
+			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Binary operation "\+" between mixed and int results in an error\.$#'
+			message: '#^Binary operation "\." between mixed and ''\:\:create'' results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Binary operation "\." between ''"'' and mixed results in an error\.$#'
+			message: '#^Binary operation "\." between mixed and ''\:\:destroy'' results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Binary operation "\." between ''Cannot read router…'' and mixed results in an error\.$#'
+			message: '#^Binary operation "\." between mixed and ''\:\:edit'' results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Binary operation "\." between ''Failed to create…'' and mixed results in an error\.$#'
+			message: '#^Binary operation "\." between mixed and ''\:\:index'' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Router.php
+
+		-
+			message: '#^Binary operation "\." between mixed and ''\:\:show'' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Router.php
+
+		-
+			message: '#^Binary operation "\." between mixed and ''\:\:store'' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/Router.php
+
+		-
+			message: '#^Binary operation "\." between mixed and ''\:\:update'' results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
 			path: src/Router.php
@@ -43,12 +121,6 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Binary operation "\." between non\-falsy\-string and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Binary operation "\." between string and mixed results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 1
@@ -57,24 +129,6 @@ parameters:
 		-
 			message: '#^Binary operation "\.\=" between string and mixed results in an error\.$#'
 			identifier: assignOp.invalid
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Call to an undefined method ReflectionType\:\:getName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Call to an undefined method ReflectionType\:\:isBuiltin\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Call to an undefined method Reflector\:\:getParameters\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: src/Router.php
 
@@ -139,37 +193,7 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Cannot access offset ''created_at'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot access offset ''data'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot access offset ''error_404'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot access offset ''id'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Cannot access offset ''ip'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot access offset ''methodIds'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: src/Router.php
@@ -178,12 +202,6 @@ parameters:
 			message: '#^Cannot access offset ''middleware'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 9
-			path: src/Router.php
-
-		-
-			message: '#^Cannot access offset ''names'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
 			path: src/Router.php
 
 		-
@@ -199,63 +217,21 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Cannot access offset ''routes'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method allowsNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method getDefaultValue\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method getName\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method getType\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method isBuiltin\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot call method isDefaultValueAvailable\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
-			count: 5
+			count: 4
+			path: src/Router.php
+
+		-
+			message: '#^Cannot cast object\|string to string\.$#'
+			identifier: cast.string
+			count: 1
 			path: src/Router.php
 
 		-
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
-			count: 2
+			count: 1
 			path: src/Router.php
 
 		-
@@ -301,18 +277,6 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Method InitPHP\\Router\\Router\:\:controllerFind\(\) has parameter \$class with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:controllerFind\(\) should return string but returns class\-string\|object\.$#'
-			identifier: return.type
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Method InitPHP\\Router\\Router\:\:controllerMiddlewaresProperty\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -337,12 +301,6 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Method InitPHP\\Router\\Router\:\:execute\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Method InitPHP\\Router\\Router\:\:execute\(\) has parameter \$execute with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
@@ -356,42 +314,6 @@ parameters:
 
 		-
 			message: '#^Method InitPHP\\Router\\Router\:\:get\(\) has parameter \$options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getClassContainer\(\) has parameter \$class with generic class ReflectionClass but does not specify its types\: T$#'
-			identifier: missingType.generics
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getClassContainer\(\) should return object but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getControllerMethod\(\) has parameter \$execute with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getControllerMethod\(\) has parameter \$route_options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getControllerMethod\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:getPatterns\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Router.php
@@ -553,18 +475,6 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Method InitPHP\\Router\\Router\:\:resolveParameters\(\) has parameter \$parameters with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Method InitPHP\\Router\\Router\:\:resolveParameters\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Method InitPHP\\Router\\Router\:\:route\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -583,6 +493,18 @@ parameters:
 			path: src/Router.php
 
 		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$source$#'
+			identifier: parameter.notFound
+			count: 1
+			path: src/Router.php
+
+		-
+			message: '#^PHPDoc tag @return with type string\|null is incompatible with native type Psr\\Http\\Message\\ResponseInterface\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Router.php
+
+		-
 			message: '#^Parameter \#1 \$callback of function call_user_func_array expects callable\(\)\: mixed, array\{object, ''after''\|''before''\} given\.$#'
 			identifier: argument.type
 			count: 1
@@ -595,33 +517,15 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#1 \$class of function class_exists expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Parameter \#1 \$class of method InitPHP\\Router\\Router\:\:middlewareClassFind\(\) expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#1 \$filename of function file_get_contents expects string, mixed given\.$#'
+			message: '#^Parameter \#1 \$execute of method InitPHP\\Router\\Resolver\\ControllerResolver\:\:parse\(\) expects array\<int\|string, mixed\>\|string, mixed given\.$#'
 			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#1 \$filename of function file_put_contents expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#1 \$filename of function is_file expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
+			count: 2
 			path: src/Router.php
 
 		-
@@ -643,15 +547,15 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, mixed given\.$#'
+			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, string given\.$#'
 			identifier: argument.type
-			count: 2
+			count: 1
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, string given\.$#'
+			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<object\>\|object, object\|string given\.$#'
 			identifier: argument.type
-			count: 3
+			count: 2
 			path: src/Router.php
 
 		-
@@ -661,19 +565,7 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#1 \$pattern of function preg_replace expects array\<string\>\|string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Parameter \#1 \$str of function strtr expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#1 \$string of function ltrim expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/Router.php
@@ -687,7 +579,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$string of function rtrim expects string, mixed given\.$#'
 			identifier: argument.type
-			count: 5
+			count: 3
 			path: src/Router.php
 
 		-
@@ -699,7 +591,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$string of function strtoupper expects string, mixed given\.$#'
 			identifier: argument.type
-			count: 2
+			count: 1
 			path: src/Router.php
 
 		-
@@ -715,21 +607,15 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Parameter \#2 \$arguments of method InitPHP\\Router\\Router\:\:execute\(\) expects array, mixed given\.$#'
+			message: '#^Parameter \#2 \$arguments of method InitPHP\\Router\\Link\\FileLinkHandler\:\:resolve\(\) expects array\<int, mixed\>, array\<string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Router.php
+
+		-
+			message: '#^Parameter \#2 \$arguments of method InitPHP\\Router\\Router\:\:execute\(\) expects array\<int, mixed\>, mixed given\.$#'
 			identifier: argument.type
 			count: 5
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#2 \$arguments of method InitPHP\\Router\\Router\:\:linkServePath\(\) expects array\<int, mixed\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#2 \$arguments of method InitPHP\\Router\\Router\:\:linkServePath\(\) expects array\<int, mixed\>, array\<string\> given\.$#'
-			identifier: argument.type
-			count: 1
 			path: src/Router.php
 
 		-
@@ -742,24 +628,6 @@ parameters:
 			message: '#^Parameter \#2 \$method of class ReflectionMethod constructor expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#2 \$method of method InitPHP\\Router\\Router\:\:controllerMiddlewaresProperty\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#2 \$replacement of function preg_replace expects array\<float\|int\|string\>\|string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Parameter \#2 \$route_options of method InitPHP\\Router\\Router\:\:getControllerMethod\(\) expects array, mixed given\.$#'
-			identifier: argument.type
-			count: 2
 			path: src/Router.php
 
 		-
@@ -817,18 +685,6 @@ parameters:
 			path: src/Router.php
 
 		-
-			message: '#^Property InitPHP\\Router\\Router\:\:\$currentControllerMethod \(string\|null\) does not accept mixed\.$#'
-			identifier: assign.propertyType
-			count: 2
-			path: src/Router.php
-
-		-
-			message: '#^Property InitPHP\\Router\\Router\:\:\$currentIp \(string\|null\) does not accept mixed\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: src/Router.php
-
-		-
 			message: '#^Property InitPHP\\Router\\Router\:\:\$currentRoute \(array\<string, mixed\>\|null\) does not accept array\|null\.$#'
 			identifier: assign.propertyType
 			count: 1
@@ -880,16 +736,4 @@ parameters:
 			message: '#^Result of && is always false\.$#'
 			identifier: booleanAnd.alwaysFalse
 			count: 4
-			path: src/Router.php
-
-		-
-			message: '#^Right side of && is always true\.$#'
-			identifier: booleanAnd.rightAlwaysTrue
-			count: 1
-			path: src/Router.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between ReflectionType and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
 			path: src/Router.php
