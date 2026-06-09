@@ -33,7 +33,6 @@ final class ParameterResolver
 {
     public function __construct(
         private RequestInterface $request,
-        private ResponseInterface $response,
         private bool $argumentNewInstance = false,
         private ?ContainerInterface $container = null
     ) {
@@ -44,13 +43,14 @@ final class ParameterResolver
      *
      * Class-typed parameters are injected (shared request/response, then
      * container/instantiation); built-in parameters are filled from the
-     * positional route arguments, then a default value, then null.
+     * positional route arguments, then a default value, then null. The current
+     * response is passed in so handlers see middleware modifications.
      *
      * @param array<int, mixed> $parameters Positional route arguments.
      * @return array<int, mixed>
      * @throws RouterException When a required built-in parameter cannot be filled.
      */
-    public function forReflection(ReflectionFunctionAbstract $reflector, array $parameters): array
+    public function forReflection(ReflectionFunctionAbstract $reflector, array $parameters, ResponseInterface $response): array
     {
         $arguments = [];
         $position = 0;
@@ -65,12 +65,12 @@ final class ParameterResolver
                     $arguments[] = $this->request;
                     continue;
                 }
-                if (!$this->argumentNewInstance && $class->isInstance($this->response)) {
-                    $arguments[] = $this->response;
+                if (!$this->argumentNewInstance && $class->isInstance($response)) {
+                    $arguments[] = $response;
                     continue;
                 }
                 if ($class->isInstantiable()) {
-                    $arguments[] = $this->make($class);
+                    $arguments[] = $this->make($class, $response);
                 }
                 continue;
             }
@@ -104,14 +104,14 @@ final class ParameterResolver
      * @param ReflectionClass<object> $class
      * @throws RouterException When a constructor dependency cannot be resolved.
      */
-    public function make(ReflectionClass $class): object
+    public function make(ReflectionClass $class, ResponseInterface $response): object
     {
         if (!$this->argumentNewInstance) {
             if ($class->isInstance($this->request)) {
                 return $this->request;
             }
-            if ($class->isInstance($this->response)) {
-                return $this->response;
+            if ($class->isInstance($response)) {
+                return $response;
             }
         }
         if ($this->container !== null) {
@@ -134,7 +134,7 @@ final class ParameterResolver
             }
             $type = $parameter->getType();
             if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
-                $arguments[] = $this->make(new ReflectionClass($type->getName()));
+                $arguments[] = $this->make(new ReflectionClass($type->getName()), $response);
                 continue;
             }
             if ($parameter->allowsNull()) {

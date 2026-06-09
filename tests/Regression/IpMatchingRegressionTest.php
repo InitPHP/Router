@@ -31,7 +31,7 @@ final class IpMatchingRegressionTest extends RegressionTestCase
             $resolved,
             'A1: a client IP that is in the allow-list must match the IP-scoped route.'
         );
-        $this->assertSame(['Admin', 'secret'], $resolved['execute']);
+        $this->assertSame(['Admin', 'secret'], $resolved->getHandler());
     }
 
     public function testClientIpOutsideAllowListDoesNotMatchRoute(): void

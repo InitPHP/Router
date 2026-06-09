@@ -29,8 +29,8 @@ abstract class Middleware
      * @param ResponseInterface $response <p>The response object used.</p>
      * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
      * @return ResponseInterface|null <p>
-     * It should return the response object to be used afterwards. Otherwise, an exception is thrown.
-     * If null is returned, the "exit" command will completely stop the script from running.
+     * Return the response to use next, or null to halt the pipeline and keep
+     * the current response as-is. Returning any other type throws an exception.
      * </p>
      */
     abstract public function before(RequestInterface $request, ResponseInterface $response, array $arguments = []): ?ResponseInterface;
@@ -44,8 +44,8 @@ abstract class Middleware
      * @param ResponseInterface $response <p>The response object used.</p>
      * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
      * @return ResponseInterface|null <p>
-     * It should return the response object to be used afterwards. Otherwise, an exception is thrown.
-     * If null is returned, the "exit" command will completely stop the script from running.
+     * Return the response to use next, or null to halt the pipeline and keep
+     * the current response as-is. Returning any other type throws an exception.
      * </p>
      */
     abstract public function after(RequestInterface $request, ResponseInterface $response, array $arguments = []): ?ResponseInterface;

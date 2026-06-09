@@ -533,16 +533,15 @@ class RouterTest extends \PHPUnit\Framework\TestCase
         $this->router->get('/contact', ['Home', 'contact']);
         $this->router->get('/about', ['Home', 'about']);
 
-        $expected = [
-            'id'        => 3,
-            'methods'   => ['GET'],
-            'path'      => 'http://www.example.com/about',
-            'execute'   => ['Home', 'about'],
-            'options'   => $this->options,
-            'arguments' => [],
-        ];
+        $route = $this->router->resolve('GET', 'http://www.example.com/about');
 
-        $this->assertEquals($expected, $this->router->resolve('GET', 'http://www.example.com/about'));
+        $this->assertNotNull($route);
+        $this->assertSame(3, $route->getId());
+        $this->assertSame(['GET'], $route->getMethods());
+        $this->assertSame('http://www.example.com/about', $route->getPath());
+        $this->assertSame(['Home', 'about'], $route->getHandler());
+        $this->assertSame($this->options, $route->getOptions());
+        $this->assertSame([], $route->getArguments());
         $this->router->destroy();
     }
 
@@ -551,19 +550,13 @@ class RouterTest extends \PHPUnit\Framework\TestCase
         $this->router->get('/', ['Home', 'index']);
         $this->router->get('/user/{string}/{id}', ['User', 'profile']);
 
-        $expected = [
-            'id'        => 2,
-            'methods'   => ['GET'],
-            'path'      => 'http://www.example.com/user/{string}/{id}',
-            'execute'   => ['User', 'profile'],
-            'options'   => $this->options,
-            'arguments' => [
-                'muhametsafak',
-                12,
-            ],
-        ];
+        $route = $this->router->resolve('GET', 'http://www.example.com/user/muhametsafak/12');
 
-        $this->assertEquals($expected, $this->router->resolve('GET', 'http://www.example.com/user/muhametsafak/12'));
+        $this->assertNotNull($route);
+        $this->assertSame(2, $route->getId());
+        $this->assertSame('http://www.example.com/user/{string}/{id}', $route->getPath());
+        $this->assertSame(['User', 'profile'], $route->getHandler());
+        $this->assertSame(['muhametsafak', '12'], $route->getArguments());
         $this->router->destroy();
     }
 }

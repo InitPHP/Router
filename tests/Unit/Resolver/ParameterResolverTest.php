@@ -31,21 +31,21 @@ final class ParameterResolverTest extends TestCase
 
     private function resolver(?ContainerInterface $container = null, bool $newInstance = false): ParameterResolver
     {
-        return new ParameterResolver($this->request, $this->response, $newInstance, $container);
+        return new ParameterResolver($this->request, $newInstance, $container);
     }
 
     public function testFillsBuiltinParametersFromPositionalArguments(): void
     {
         $fn = new ReflectionFunction(static fn ($id, $slug) => null);
 
-        $this->assertSame(['5', 'admin'], $this->resolver()->forReflection($fn, ['5', 'admin']));
+        $this->assertSame(['5', 'admin'], $this->resolver()->forReflection($fn, ['5', 'admin'], $this->response));
     }
 
     public function testInjectsSharedRequestAndResponseByType(): void
     {
         $fn = new ReflectionFunction(static fn (RequestInterface $req, ResponseInterface $res) => null);
 
-        $args = $this->resolver()->forReflection($fn, []);
+        $args = $this->resolver()->forReflection($fn, [], $this->response);
 
         $this->assertSame($this->request, $args[0]);
         $this->assertSame($this->response, $args[1]);
@@ -55,14 +55,14 @@ final class ParameterResolverTest extends TestCase
     {
         $fn = new ReflectionFunction(static fn ($page = 1) => null);
 
-        $this->assertSame([1], $this->resolver()->forReflection($fn, []));
+        $this->assertSame([1], $this->resolver()->forReflection($fn, [], $this->response));
     }
 
     public function testUsesNullForNullableParameterWithoutArgument(): void
     {
         $fn = new ReflectionFunction(static fn (?string $q) => null);
 
-        $this->assertSame([null], $this->resolver()->forReflection($fn, []));
+        $this->assertSame([null], $this->resolver()->forReflection($fn, [], $this->response));
     }
 
     public function testThrowsForRequiredBuiltinParameterThatCannotBeFilled(): void
@@ -72,19 +72,19 @@ final class ParameterResolverTest extends TestCase
         $fn = new ReflectionFunction(static fn (string $required) => null);
 
         $this->expectException(RouterException::class);
-        $this->resolver()->forReflection($fn, []);
+        $this->resolver()->forReflection($fn, [], $this->response);
     }
 
     public function testMakeReturnsSharedRequestForRequestTypedClass(): void
     {
-        $made = $this->resolver()->make(new ReflectionClass($this->request));
+        $made = $this->resolver()->make(new ReflectionClass($this->request), $this->response);
 
         $this->assertSame($this->request, $made);
     }
 
     public function testMakeInstantiatesAndResolvesConstructorDependencies(): void
     {
-        $service = $this->resolver()->make(new ReflectionClass(DependentService::class));
+        $service = $this->resolver()->make(new ReflectionClass(DependentService::class), $this->response);
 
         $this->assertInstanceOf(DependentService::class, $service);
         $this->assertInstanceOf(PlainService::class, $service->dependency);
@@ -109,7 +109,7 @@ final class ParameterResolverTest extends TestCase
             }
         };
 
-        $made = $this->resolver($container)->make(new ReflectionClass(PlainService::class));
+        $made = $this->resolver($container)->make(new ReflectionClass(PlainService::class), $this->response);
 
         $this->assertSame($sentinel, $made);
     }
