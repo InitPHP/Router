@@ -8,7 +8,6 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.3
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -21,32 +20,24 @@ use Psr\Http\Message\{RequestInterface, ResponseInterface};
 abstract class Middleware
 {
     /**
-     * The method to run before the routes start executing.
+     * Runs before the route handler, between the request and the route.
      *
-     * This method works between the request and the route.
-     *
-     * @param RequestInterface $request <p>The request object used.</p>
-     * @param ResponseInterface $response <p>The response object used.</p>
-     * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
-     * @return ResponseInterface|null <p>
-     * Return the response to use next, or null to halt the pipeline and keep
-     * the current response as-is. Returning any other type throws an exception.
-     * </p>
+     * @param RequestInterface $request The current request.
+     * @param ResponseInterface $response The current response.
+     * @param array<int, mixed> $arguments The route's captured arguments, if any.
+     * @return ResponseInterface|null The response to use next, or null to halt
+     * the pipeline and keep the current response. Any other return throws.
      */
     abstract public function before(RequestInterface $request, ResponseInterface $response, array $arguments = []): ?ResponseInterface;
 
     /**
-     * The method to run after the routes finish executing.
+     * Runs after the route handler, between the route and the response.
      *
-     * This method works between route and response.
-     *
-     * @param RequestInterface $request <p>The request object used.</p>
-     * @param ResponseInterface $response <p>The response object used.</p>
-     * @param array<int, mixed> $arguments <p>Array holding the route's arguments, if any.</p>
-     * @return ResponseInterface|null <p>
-     * Return the response to use next, or null to halt the pipeline and keep
-     * the current response as-is. Returning any other type throws an exception.
-     * </p>
+     * @param RequestInterface $request The current request.
+     * @param ResponseInterface $response The current response.
+     * @param array<int, mixed> $arguments The route's captured arguments, if any.
+     * @return ResponseInterface|null The response to use next, or null to halt
+     * the pipeline and keep the current response. Any other return throws.
      */
     abstract public function after(RequestInterface $request, ResponseInterface $response, array $arguments = []): ?ResponseInterface;
 

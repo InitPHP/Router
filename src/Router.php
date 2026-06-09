@@ -8,7 +8,6 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.2.1
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -19,7 +18,7 @@ namespace InitPHP\Router;
 use InitPHP\Router\Cache\RouteCache;
 use InitPHP\Router\Dispatch\Dispatcher;
 use InitPHP\Router\Dispatch\MiddlewareRunner;
-use InitPHP\Router\Exception\{InvalidArgumentException, RouterException};
+use InitPHP\Router\Exception\{InvalidArgumentException, PageNotFoundException, RouterException};
 use InitPHP\Router\Http\RequestContext;
 use InitPHP\Router\Link\FileLinkHandler;
 use InitPHP\Router\Matching\PatternRegistry;
@@ -29,6 +28,14 @@ use InitPHP\Router\Resolver\ParameterResolver;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\{RequestInterface, ResponseInterface};
 
+/**
+ * HTTP router: registers routes, resolves the one matching the current request
+ * and dispatches it through the middleware/handler pipeline to a PSR-7 response.
+ *
+ * The work is delegated to focused collaborators (route collection, matcher,
+ * dispatcher, middleware runner, controller/parameter resolvers, link handler
+ * and cache); this class is the registration façade and public API.
+ */
 class Router
 {
     public const BOTH = 0; // both
@@ -115,6 +122,11 @@ class Router
 
     private string $currentMethod = '';
 
+    /**
+     * @param array<string, mixed> $configs Router configuration: paths,
+     * namespaces, base_path, variable_method, argument_new_instance, plus the
+     * optional "container" (PSR-11) and "cache" sub-arrays.
+     */
     public function __construct(RequestInterface $request, ResponseInterface $response, array $configs = [])
     {
         if (isset($configs['container'])) {
@@ -171,6 +183,15 @@ class Router
         $this->destroy();
     }
 
+    /**
+     * Returns the registered routes as plain arrays.
+     *
+     * With no method, routes are grouped by HTTP method; with a method, only
+     * that method's routes (keyed by path) are returned. Each entry is
+     * ['execute' => handler, 'options' => array].
+     *
+     * @return array<string, mixed>
+     */
     public function getRoutes(?string $method = null): array
     {
         $res = [];
@@ -196,6 +217,9 @@ class Router
         return $res;
     }
 
+    /**
+     * Clears all registered routes and resets the router to its initial state.
+     */
     public function destroy(): void
     {
         $this->collection->clear();
@@ -245,13 +269,16 @@ class Router
     }
 
     /**
-     * Adds a route.
+     * Registers a route for one or more HTTP methods.
      *
-     * @param string|string[] $methods <p>An array or "|" separated string.</p>
-     * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|list<string> $methods An array, or a "|"-separated string, of supported methods.
+     * @param string $path The route path (group prefix and base path are prepended).
+     * @param string|callable|array<int|string, mixed> $execute A closure, a
+     * "Controller@method" string, or a [class, method] handler.
+     * @param array<string, mixed> $options
      * @return $this
+     * @throws InvalidArgumentException When $execute or $methods has an unsupported type, or a method is not supported.
+     * @throws RouterException When the route name is already taken.
      */
     public function register($methods, string $path, $execute, array $options = []): self
     {
@@ -311,6 +338,18 @@ class Router
         return $this;
     }
 
+    /**
+     * Registers a virtual link that serves a file or a directory's files.
+     *
+     * For a directory, requests under the link path are mapped to files inside
+     * it (with path-traversal protection at serve time).
+     *
+     * @param string $link The URL path to expose.
+     * @param string $source An existing file or directory to serve.
+     * @param array<string, mixed> $options
+     * @return $this
+     * @throws InvalidArgumentException When $source does not exist.
+     */
     public function link(string $link, string $source, array $options = []): self
     {
         if (!\file_exists($source)) {
@@ -327,8 +366,8 @@ class Router
      * @see Router::register()
      * @param string|string[] $methods
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function add($methods, string $path, $execute, array $options = []): self
@@ -339,8 +378,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function get(string $path, $execute, array $options = []): self
@@ -351,8 +390,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function post(string $path, $execute, array $options = []): self
@@ -363,8 +402,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function put(string $path, $execute, array $options = []): self
@@ -375,8 +414,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function delete(string $path, $execute, array $options = []): self
@@ -387,8 +426,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function options(string $path, $execute, array $options = []): self
@@ -399,8 +438,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function patch(string $path, $execute, array $options = []): self
@@ -411,8 +450,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function head(string $path, $execute, array $options = []): self
@@ -423,8 +462,8 @@ class Router
     /**
      * @see Router::register()
      * @param string $path
-     * @param string|callable|array $execute
-     * @param array $options
+     * @param string|callable|array<int|string, mixed> $execute
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function any(string $path, $execute, array $options = []): self
@@ -469,12 +508,11 @@ class Router
     }
 
     /**
-     * It is used for routing by grouping urls with a path prefix.
+     * Groups the routes registered inside the callback under a shared path prefix.
      *
      * @param string $prefix
-     * @param \Closure $group
-     * @param array $options
-     * @return void
+     * @param \Closure(Router): void $group Receives this router to register the grouped routes.
+     * @param array<string, mixed> $options
      */
     public function group(string $prefix, \Closure $group, array $options = []): void
     {
@@ -489,12 +527,11 @@ class Router
     }
 
     /**
-     * Provides domain-based route grouping.
+     * Groups the routes registered inside the callback under a host (domain).
      *
      * @param string $host
-     * @param \Closure $group
-     * @param array $options
-     * @return void
+     * @param \Closure(Router): void $group
+     * @param array<string, mixed> $options
      */
     public function domain(string $host, \Closure $group, array $options = []): void
     {
@@ -509,12 +546,11 @@ class Router
     }
 
     /**
-     * It only does route grouping for a specific port.
+     * Groups routes that only respond on a specific port.
      *
      * @param int $port
-     * @param \Closure $group
-     * @param array $options
-     * @return void
+     * @param \Closure(Router): void $group
+     * @param array<string, mixed> $options
      */
     public function port(int $port, \Closure $group, array $options = []): void
     {
@@ -529,12 +565,12 @@ class Router
     }
 
     /**
-     * Defines routes that will run on requests from one or more IPs.
+     * Groups routes that only respond to requests from the given client IP(s).
      *
-     * @param string|string[] $ip
-     * @param \Closure $group
-     * @param array $options
-     * @return void
+     * @param string|list<string> $ip A single IP address or a list of them.
+     * @param \Closure(Router): void $group
+     * @param array<string, mixed> $options
+     * @throws InvalidArgumentException When an IP address is not valid.
      */
     public function ip($ip, \Closure $group, array $options = []): void
     {
@@ -549,11 +585,13 @@ class Router
     }
 
     /**
-     * Defines routes for a resource controller.
+     * Registers the seven RESTful routes for a resource controller
+     * (index, create, store, show, edit, update, destroy), each with a
+     * generated route name based on the prefix.
      *
-     * @param string $prefix
-     * @param string $controller
-     * @return void
+     * @param string $prefix The resource path/name prefix (e.g. "photos").
+     * @param string $controller The controller class (resolved via the configured namespace).
+     * @throws RouterException When the controller cannot be located.
      */
     public function resource(string $prefix, string $controller): void
     {
@@ -574,10 +612,11 @@ class Router
     }
 
     /**
-     * Names the route before it.
+     * Assigns a name to the most recently registered route.
      *
      * @param string $name
      * @return $this
+     * @throws RouterException When there is no route to name, or the name is already in use.
      */
     public function name(string $name): self
     {
@@ -601,10 +640,12 @@ class Router
     }
 
     /**
-     * Generates a URL for a named route.
+     * Builds a URL for a named route, substituting the given arguments and
+     * stripping any unused optional segments. Returns the name unchanged when
+     * no route has that name.
      *
      * @param string $name
-     * @param array $arguments
+     * @param array<string, scalar|\Stringable|null> $arguments Values keyed by parameter name.
      * @return string
      */
     public function route(string $name, array $arguments = []): string
@@ -645,13 +686,14 @@ class Router
     }
 
     /**
-     * Defines the middleware to be applied to the last added route before it.
+     * Attaches a middleware (filter) to the most recently registered route.
      *
-     * @param string|callable $filter <p>
-     * A callable function or middleware class name that extends the \InitPHP\Router\Middleware class.
-     * </p>
-     * @param int $position <p>Router::BEFORE, Router::AFTER  or Router::BOTH</p>
+     * @param string|callable $filter A callable, or the name of a middleware
+     * class extending {@see Middleware}.
+     * @param int $position One of Router::BEFORE, Router::AFTER or Router::BOTH.
      * @return $this
+     * @throws RouterException When there is no route to attach to, the filter
+     * type is invalid, or $position is not a valid constant.
      */
     public function filter($filter, int $position = self::BOTH): self
     {
@@ -678,11 +720,10 @@ class Router
     }
 
     /**
-     * Defines the middleware to be applied to the last added route before it.
+     * Alias of {@see Router::filter()}.
      *
-     * @see Router::filter()
      * @param string|callable $middleware
-     * @param int $position
+     * @param int $position One of Router::BEFORE, Router::AFTER or Router::BOTH.
      * @return $this
      */
     public function middleware($middleware, int $position = self::BOTH): self
@@ -691,10 +732,10 @@ class Router
     }
 
     /**
-     * Adds a new pattern to be used.
+     * Registers a custom named parameter pattern (e.g. "year" => "[0-9]{4}").
      *
-     * @param string $key
-     * @param string $pattern
+     * @param string $key The pattern name, with or without ":"/"{}" decoration.
+     * @param string $pattern A regular expression; wrapped in a group if needed.
      * @return $this
      */
     public function pattern(string $key, string $pattern): self
@@ -704,9 +745,8 @@ class Router
     }
 
     /**
-     * Adds a new pattern to be used.
+     * Alias of {@see Router::pattern()}.
      *
-     * @see Router::pattern()
      * @param string $key
      * @param string $pattern
      * @return $this
@@ -717,10 +757,13 @@ class Router
     }
 
     /**
-     * It finds the route to run and runs it.
+     * Resolves the current request (if not already resolved) and runs it
+     * through the full pipeline, returning the resulting response.
      *
      * @return ResponseInterface
-     * @throws \ReflectionException
+     * @throws PageNotFoundException When no route matches and no 404 handler is set.
+     * @throws RouterException When a controller/middleware cannot be resolved.
+     * @throws \ReflectionException When a handler cannot be reflected.
      */
     public function dispatch(): ResponseInterface
     {
@@ -783,6 +826,11 @@ class Router
         return $data;
     }
 
+    /**
+     * @param string|list<string> $methods
+     * @return list<string>
+     * @throws InvalidArgumentException When a method is not supported.
+     */
     private function registerMethodsCheck($methods): array
     {
         if (\is_array($methods)) {
@@ -816,6 +864,11 @@ class Router
         $this->cache->save($this->collection->toCache() + ['error_404' => $this->error404]);
     }
 
+    /**
+     * @param string|list<string> $ip
+     * @return list<string>
+     * @throws InvalidArgumentException When an IP address is not valid.
+     */
     private function confirmIpAddresses($ip): array
     {
         if (\is_string($ip)) {

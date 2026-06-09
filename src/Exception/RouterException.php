@@ -8,7 +8,6 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.3
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -16,6 +15,10 @@ declare(strict_types=1);
 
 namespace InitPHP\Router\Exception;
 
+/**
+ * Base exception for all router runtime errors (unresolved controllers or
+ * middleware, duplicate route names, invalid filters, cache I/O, etc.).
+ */
 class RouterException extends \RuntimeException
 {
 }

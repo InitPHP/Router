@@ -8,7 +8,6 @@
  * @author     Muhammet ŞAFAK <info@muhammetsafak.com.tr>
  * @copyright  Copyright © 2022 Muhammet ŞAFAK
  * @license    ./LICENSE  MIT
- * @version    1.1.3
  * @link       https://www.muhammetsafak.com.tr
  */
 
@@ -19,7 +18,11 @@ namespace InitPHP\Router;
 use InitPHP\Router\Exception\InvalidArgumentException;
 
 /**
- * This class was created to quickly and accurately define the URLs of the routes.
+ * Internal, mutable URL builder used to assemble route paths.
+ *
+ * Note: unlike PSR-7's UriInterface, the withScheme()/withHost()/withPort()/
+ * withPath() methods mutate this instance in place and return $this; they are
+ * not immutable. This class is an implementation detail of the router.
  */
 final class Uri
 {
