@@ -90,3 +90,24 @@ jobs:
         env:
           PHP_CS_FIXER_IGNORE_ENV: 1
         run: composer cs:check
+
+  coverage:
+    name: Coverage (line floor 88%)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, json, fileinfo
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run tests with coverage and enforce the floor
+        run: composer coverage:check

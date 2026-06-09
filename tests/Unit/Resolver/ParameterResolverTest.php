@@ -113,4 +113,48 @@ final class ParameterResolverTest extends TestCase
 
         $this->assertSame($sentinel, $made);
     }
+
+    public function testMakeFallsBackToInstantiationWhenContainerReturnsNonObject(): void
+    {
+        $container = new class () implements ContainerInterface {
+            public function get(string $id): mixed
+            {
+                return 'not-an-object';
+            }
+
+            public function has(string $id): bool
+            {
+                return false;
+            }
+        };
+
+        $made = $this->resolver($container)->make(new ReflectionClass(PlainService::class), $this->response);
+
+        $this->assertInstanceOf(PlainService::class, $made);
+    }
+
+    public function testMakePassesNullToNullableScalarConstructorDependency(): void
+    {
+        $made = $this->resolver()->make(new ReflectionClass(NullableScalarDependency::class), $this->response);
+
+        $this->assertInstanceOf(NullableScalarDependency::class, $made);
+        $this->assertNull($made->name);
+    }
+
+    public function testMakeThrowsForUnresolvableScalarConstructorDependency(): void
+    {
+        $this->expectException(RouterException::class);
+        $this->resolver()->make(new ReflectionClass(RequiredScalarDependency::class), $this->response);
+    }
+
+    public function testWithNewInstanceTheSharedResponseIsNotInjected(): void
+    {
+        // argument_new_instance on: the shared request/response shortcut is off,
+        // and a non-instantiable interface type cannot be built, so it is
+        // skipped (whereas with the flag off the shared response is injected).
+        $fn = new ReflectionFunction(static fn (ResponseInterface $res) => $res);
+
+        $this->assertSame([], $this->resolver(null, true)->forReflection($fn, [], $this->response));
+        $this->assertSame([$this->response], $this->resolver(null, false)->forReflection($fn, [], $this->response));
+    }
 }

@@ -13,6 +13,7 @@ use InitPHP\Router\Resolver\ParameterResolver;
 use Psr\Http\Message\ResponseInterface;
 use Tests\Router\Unit\Fixtures\HeaderMiddleware;
 use Tests\Router\Unit\Fixtures\MiddlewareController;
+use Tests\Router\Unit\Fixtures\RichMiddlewareController;
 
 require_once __DIR__ . '/../Fixtures/DispatchFixtures.php';
 
@@ -106,5 +107,38 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame([HeaderMiddleware::class], $runner->controllerMiddlewares($controller, 'index', true));
         $this->assertSame([], $runner->controllerMiddlewares($controller, 'index', false));
+    }
+
+    public function testControllerMiddlewaresFlattensGlobalAndMethodSpecificEntries(): void
+    {
+        $controller = new RichMiddlewareController();
+        $runner = $this->runner();
+
+        $this->assertSame(
+            ['GlobalBefore', 'GlobalFilter', 'IndexBefore'],
+            $runner->controllerMiddlewares($controller, 'index', true)
+        );
+        $this->assertSame(
+            ['GlobalAfter', 'GlobalFilter', 'IndexAfter'],
+            $runner->controllerMiddlewares($controller, 'index', false)
+        );
+        // A method without its own entry gets only the global filters.
+        $this->assertSame(
+            ['GlobalBefore', 'GlobalFilter'],
+            $runner->controllerMiddlewares($controller, 'other', true)
+        );
+    }
+
+    public function testClassFilterIsResolvedViaTheMiddlewareNamespace(): void
+    {
+        $result = $this->runner()->run(
+            ['HeaderMiddleware'],
+            $this->response,
+            [],
+            true,
+            ['namespaces' => ['middleware' => 'Tests\\Router\\Unit\\Fixtures']]
+        );
+
+        $this->assertSame('ran', $result->response->getHeaderLine('X-Before'));
     }
 }

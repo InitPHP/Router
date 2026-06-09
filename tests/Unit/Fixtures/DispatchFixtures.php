@@ -45,6 +45,45 @@ final class HeaderMiddleware extends Middleware
     }
 }
 
+final class RichMiddlewareController
+{
+    /** @var array<int|string, mixed> */
+    public array $middlewares = [
+        'GlobalFilter',
+        'before' => ['GlobalBefore'],
+        'after'  => ['GlobalAfter'],
+        'index'  => [
+            'before' => ['IndexBefore'],
+            'after'  => ['IndexAfter'],
+        ],
+    ];
+
+    public function index(): string
+    {
+        return 'rich';
+    }
+}
+
+final class GreetingService
+{
+    public function greet(): string
+    {
+        return 'hello-from-service';
+    }
+}
+
+final class ServiceController
+{
+    public function __construct(private GreetingService $service)
+    {
+    }
+
+    public function index(): string
+    {
+        return $this->service->greet();
+    }
+}
+
 final class UnauthorizedMiddleware extends Middleware
 {
     public function before(RequestInterface $request, ResponseInterface $response, array $arguments = []): ?ResponseInterface

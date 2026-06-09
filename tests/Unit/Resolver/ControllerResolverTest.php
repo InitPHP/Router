@@ -78,4 +78,19 @@ final class ControllerResolverTest extends TestCase
         $this->expectException(RouterException::class);
         (new ControllerResolver())->find('NoSuchControllerHere');
     }
+
+    public function testFindRequiresAControllerFromTheConfiguredPath(): void
+    {
+        $dir = sys_get_temp_dir() . '/router-ctrl-' . bin2hex(random_bytes(6));
+        mkdir($dir);
+        $class = 'PathLoadedController' . bin2hex(random_bytes(4));
+        file_put_contents($dir . '/' . $class . '.php', "<?php\nnamespace App\\Loaded;\nclass {$class} {}\n");
+
+        $resolved = (new ControllerResolver('App\\Loaded', $dir))->find($class);
+
+        @unlink($dir . '/' . $class . '.php');
+        @rmdir($dir);
+
+        $this->assertSame('App\\Loaded\\' . $class, $resolved);
+    }
 }

@@ -15,3 +15,17 @@ final class DependentService
     {
     }
 }
+
+final class NullableScalarDependency
+{
+    public function __construct(public ?string $name)
+    {
+    }
+}
+
+final class RequiredScalarDependency
+{
+    public function __construct(public string $name)
+    {
+    }
+}

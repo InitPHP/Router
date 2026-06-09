@@ -49,6 +49,10 @@
     "scripts": {
         "test": "phpunit",
         "test:coverage": "phpunit --coverage-text --coverage-html build/coverage",
+        "coverage:check": [
+            "phpunit --coverage-clover=coverage.xml",
+            "@php bin/check-coverage.php coverage.xml 88"
+        ],
         "phpstan": "phpstan analyse",
         "cs:check": "php-cs-fixer fix --dry-run --diff",
         "cs:fix": "php-cs-fixer fix"

@@ -8,3 +8,4 @@
 /.phpstan.cache/
 /.php-cs-fixer.cache
 /build/
+/coverage.xml
