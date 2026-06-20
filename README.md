@@ -21,6 +21,7 @@ request/response implementation.
 - Customizable 404 handling.
 - Serve files or whole directories as virtual links (with path-traversal protection).
 - Optional route caching.
+- First-class liveness/readiness health endpoints and a production-readiness linter.
 
 ## Requirements
 
@@ -93,6 +94,61 @@ $response = $router->dispatch();
 // Emit it.
 (new Emitter())->emit($response);
 ```
+
+## Health checks & readiness linting
+
+Expose first-class **liveness** (`/healthz`: the process is up) and **readiness**
+(`/readyz`: dependencies are OK) probes. Register named readiness checks on a
+`HealthRegistry`, then wire both routes onto the router:
+
+```php
+use InitPHP\Router\Health\{HealthEndpoints, HealthRegistry, CheckResult};
+
+$registry = new HealthRegistry();
+$registry->register('db-ping', fn (): bool => $pdo->query('SELECT 1') !== false);
+$registry->register('cache-ping', function () use ($redis): CheckResult {
+    return $redis->ping()
+        ? CheckResult::ok('cache-ping')
+        : CheckResult::fail('cache-ping', 'no PONG');
+});
+
+(new HealthEndpoints($registry))->register($router); // adds /healthz and /readyz
+```
+
+- **Liveness** always returns `200 {"status":"ok"}` — reaching the handler proves
+  the process is alive (it runs no checks).
+- **Readiness** runs every check and returns `200` when all pass or `503` when any
+  fails, with a JSON body listing each check's `status`/`detail`. A check may
+  return a `bool` or a `CheckResult`; a check that throws is recorded as a
+  failure (it never takes the endpoint down).
+
+Paths are configurable: `->register($router, '/_alive', '/_ready')`, or use the
+single-sided `registerLiveness()` / `registerReadiness()`.
+
+### CI gate: the readiness linter
+
+`ReadinessLinter` inspects the configured routes and asserts the app exposes
+**both** a liveness and a readiness endpoint, and that readiness has **≥1**
+registered check. It returns a structured `LintReport` (no exceptions) so it can
+gate CI:
+
+```php
+use InitPHP\Router\Health\ReadinessLinter;
+
+$report = (new ReadinessLinter($registry))->lint($router);
+if (!$report->passes()) {
+    foreach ($report->findings as $finding) {
+        fwrite(STDERR, "[{$finding->severity->value}] {$finding->code}: {$finding->message}\n");
+    }
+    exit($report->exitCode()); // 1 on failure, 0 on pass
+}
+```
+
+Each finding has a stable machine `code` (`missing_liveness`, `missing_readiness`,
+`readiness_has_no_checks`), a `severity` (`error` fails the gate; `warning` is
+advisory) and a human-readable `message`. Endpoints added via `HealthEndpoints`
+are recognised by their route tag; hand-rolled conventional paths
+(`/healthz`, `/readyz`, …) are recognised too.
 
 ## Documentation
 

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-20
+
+### Added
+
+- **Liveness/readiness health endpoints** in a new `InitPHP\Router\Health\`
+  namespace. `HealthEndpoints` registers a `/healthz`-style liveness route
+  (always 200) and a `/readyz`-style readiness route (200 when all checks pass,
+  503 when any fails) on a `Router`, each with a JSON body. `HealthRegistry`
+  holds named readiness checks (callables returning `bool` or `CheckResult`);
+  a throwing check is recorded as a failure. `HealthReport`/`CheckResult` model
+  the aggregated outcome. Routes carry a `health` option tag for discovery.
+- **Production-readiness linter** `ReadinessLinter`: inspects the configured
+  routes and asserts the app exposes both a liveness and a readiness endpoint,
+  and that readiness has at least one registered check. Returns a structured
+  `LintReport` of `LintFinding`s (stable `code`, `LintSeverity`, `message`) with
+  `passes()` / `exitCode()` so it can gate CI. Recognises both tagged endpoints
+  and hand-rolled conventional paths.
+
 ## [2.0.0] - 2026-06-09
 
 A major modernisation release. The monolithic router is decomposed into focused,
