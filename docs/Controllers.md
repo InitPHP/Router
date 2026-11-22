@@ -4,7 +4,7 @@ Instead of closures, a route can point at a controller method.
 
 ## Handler formats
 
-All of these are equivalent ways to reference `HomeController::about()`:
+All of these reference `HomeController::about()`:
 
 ```php
 $router->get('/about', 'HomeController@about');
@@ -16,13 +16,13 @@ $router->get('/about', [HomeController::class => 'about']);
 
 The controller is instantiated when the route is dispatched, and its
 dependencies are resolved automatically (see
-[Dependency injection](./dependency-injection.md)). Route parameters are passed
-as method arguments:
+[Dependency Injection](Dependency-Injection.md)). Route parameters are passed as
+method arguments:
 
 ```php
 class PostController
 {
-    public function show(Request $request, $id)
+    public function show(ServerRequest $request, $id)
     {
         return 'Post ' . $id;
     }
@@ -33,9 +33,9 @@ $router->get('/posts/{id}', 'PostController@show');
 
 ## Locating controller classes
 
-If you reference a controller by its fully-qualified class name, it is used
-as-is. If you reference it by short name, configure a namespace (and optionally
-a directory to load it from):
+A fully-qualified class name is used as-is. A short name is resolved against the
+configured controller namespace, and optionally loaded from a configured
+directory:
 
 ```php
 $router = new Router($request, $response, [
@@ -48,8 +48,7 @@ $router = new Router($request, $response, [
 $router->get('/', 'HomeController@index');
 ```
 
-If a controller cannot be located, a
-`InitPHP\Router\Exception\RouterException` is thrown.
+If a controller cannot be located, a [`RouterException`](Exceptions.md) is thrown.
 
 ## Resource controllers
 
@@ -61,7 +60,7 @@ $router->resource('photos', 'PhotoController');
 ```
 
 | Method | Path | Controller method | Route name |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | GET | `/photos` | `index` | `photos.index` |
 | GET | `/photos/create` | `create` | `photos.create` |
 | POST | `/photos` | `store` | `photos.store` |
@@ -75,7 +74,7 @@ The controller is resolved using the configured controller namespace/path, so
 
 ## Per-controller middleware
 
-A controller may declare middleware via a public `$middlewares` property —
-see [Middleware](./middleware.md#controller-middlewares).
+A controller may declare middleware via a public `$middlewares` property — see
+[Middleware → Controller middlewares](Middleware.md#controller-middlewares).
 
-Next: [Dependency injection](./dependency-injection.md).
+Next: [Named Routes & URLs](Named-Routes-and-URLs.md).

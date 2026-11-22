@@ -16,7 +16,7 @@ $router->get('/admin', 'AdminController@index')
 The second argument controls when the middleware runs:
 
 | Constant | Runs |
-|---|---|
+| --- | --- |
 | `Router::BEFORE` | before the handler |
 | `Router::AFTER` | after the handler |
 | `Router::BOTH` (default) | both |
@@ -79,7 +79,7 @@ $router->get('/admin', 'AdminController@index')->middleware('AuthMiddleware');
 ```
 
 A class middleware is instantiated once and reused, and its own dependencies are
-resolved like any other class (see [Dependency injection](./dependency-injection.md)).
+resolved like any other class (see [Dependency Injection](Dependency-Injection.md)).
 
 ## Return values & halting
 
@@ -90,11 +90,11 @@ Every middleware (callable or class) must return:
   (the handler and remaining middleware do not run); or
 - **`null`** — the pipeline **halts** and the current response is returned as-is.
 
-Returning anything else throws `InitPHP\Router\Exception\RouterException`.
+Returning anything else throws [`RouterException`](Exceptions.md).
 
-> In 1.x, returning `null` called `exit()`. In 2.0 it halts the pipeline
-> cleanly and returns the current response — see the
-> [Upgrade guide](./upgrading-1.x-to-2.0.md).
+> In 1.x, returning `null` called `exit()`. In 2.0 it halts the pipeline cleanly
+> and returns the current response — see
+> [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#middleware-null-return-no-longer-calls-exit).
 
 ## Controller middlewares
 
@@ -106,9 +106,9 @@ specific method:
 class AdminController
 {
     public array $middlewares = [
-        AuthMiddleware::class,                 // before & after, every action
-        'before' => [LogMiddleware::class],    // before, every action
-        'index'  => [                          // only the index() action
+        AuthMiddleware::class,              // before & after, every action
+        'before' => [LogMiddleware::class], // before, every action
+        'index'  => [                       // only the index() action
             'before' => [RateLimitMiddleware::class],
         ],
     ];
@@ -117,4 +117,4 @@ class AdminController
 }
 ```
 
-Next: [Named routes & URLs](./named-routes.md).
+Next: [Static File Links](Static-File-Links.md).

@@ -67,11 +67,11 @@ location / {
 <?php
 require_once 'vendor/autoload.php';
 
-use InitPHP\HTTP\Message\{Request, Response};
+use InitPHP\HTTP\Message\{ServerRequest, Response};
 use InitPHP\HTTP\Emitter\Emitter;
 use InitPHP\Router\Router;
 
-$request  = Request::createFromGlobals();
+$request  = ServerRequest::createFromGlobals();
 $response = new Response();
 
 $router = new Router($request, $response);
@@ -80,7 +80,7 @@ $router->get('/', function () {
     return 'Hello World!';
 });
 
-$router->post('/login', function (Request $request, Response $response) {
+$router->post('/login', function (ServerRequest $request, Response $response) {
     return $response->withStatus(401);
 });
 
@@ -153,14 +153,14 @@ are recognised by their route tag; hand-rolled conventional paths
 
 ## Documentation
 
-Full, example-driven documentation lives in [`docs/`](./docs/README.md):
+Full, example-driven documentation lives in [`docs/`](./docs/Home.md):
 
-- [Installation](./docs/installation.md) · [Getting started](./docs/getting-started.md) · [Configuration](./docs/configuration.md)
-- [Routing](./docs/routing.md) · [Route parameters & patterns](./docs/route-parameters.md) · [Route groups](./docs/groups.md)
-- [Controllers](./docs/controllers.md) · [Dependency injection](./docs/dependency-injection.md) · [Middleware](./docs/middleware.md)
-- [Named routes & URLs](./docs/named-routes.md) · [Static file links](./docs/static-file-links.md)
-- [Error handling](./docs/error-handling.md) · [Caching](./docs/caching.md)
-- [Upgrading from 1.x to 2.0](./docs/upgrading-1.x-to-2.0.md)
+- [Installation](./docs/Installation.md) · [Getting started](./docs/Quick-Start.md) · [Configuration](./docs/Configuration.md)
+- [Routing](./docs/Routing.md) · [Route parameters & patterns](./docs/Route-Parameters.md) · [Route groups](./docs/Route-Groups.md)
+- [Controllers](./docs/Controllers.md) · [Dependency injection](./docs/Dependency-Injection.md) · [Middleware](./docs/Middleware.md)
+- [Named routes & URLs](./docs/Named-Routes-and-URLs.md) · [Static file links](./docs/Static-File-Links.md)
+- [Error handling](./docs/Error-Handling.md) · [Caching](./docs/Caching.md)
+- [Upgrading from 1.x to 2.0](./docs/Upgrading-from-1.x-to-2.0.md)
 
 ## Testing
 

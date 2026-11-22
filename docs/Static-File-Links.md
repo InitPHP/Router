@@ -1,4 +1,4 @@
-# Static file links
+# Static File Links
 
 `link()` exposes a file — or all files inside a directory — at a URL path. The
 file is streamed into the response with appropriate `Content-Type` and
@@ -32,10 +32,10 @@ match and falls through to a 404 — it can never escape the directory.
 
 ## Notes
 
-- `link()` throws `InitPHP\Router\Exception\InvalidArgumentException` if the
-  source path does not exist.
+- `link()` throws [`InvalidArgumentException`](Exceptions.md) if the source path
+  does not exist.
 - Link routes are considered for **every** HTTP method.
 - A request that matches a link but whose target file is missing falls through to
-  404 handling (see [Error handling](./error-handling.md)).
+  404 handling (see [Error Handling](Error-Handling.md)).
 
-Next: [Error handling](./error-handling.md).
+Next: [Error Handling](Error-Handling.md).
