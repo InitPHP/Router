@@ -2,14 +2,14 @@
 
 Version 2.0 modernises the internals and tightens the public API. The
 registration API (`get()`, `post()`, `group()`, `name()`, `route()`,
-`filter()`, …) is unchanged, so most applications upgrade with little or no
-code change. The breaking changes are listed below with migration steps.
+`filter()`, …) is unchanged, so most applications upgrade with little or no code
+change. The breaking changes are below, each with a migration step.
 
 ## At a glance
 
 | Change | Action |
-|---|---|
-| Minimum PHP is now **8.1** | Run on PHP 8.1+ |
+| --- | --- |
+| Minimum PHP is now **8.2** | Run on PHP 8.2+ |
 | `resolve()` returns a `Route` object, not an array | Use the `Route` getters |
 | `INITPHP_ROUTER_CURRENT_*` constants removed | Use the `getCurrent*()` methods |
 | Middleware returning `null` halts (no `exit()`) | Review middleware that returned `null` |
@@ -17,19 +17,21 @@ code change. The breaking changes are listed below with migration steps.
 | Client IP is read from `$_SERVER` | Verify your proxy setup |
 | The container must implement PSR-11 | Pass a `ContainerInterface` |
 
-## PHP 8.1+
+## PHP 8.2+
 
-The minimum supported PHP version is **8.1**. Update your environment and your
+The minimum supported PHP version is **8.2** (2.0.0 itself required 8.1; support
+for 8.1 was dropped afterwards). Update your environment and your
 `composer.json` constraints accordingly.
 
 ## `resolve()` returns a `Route`
 
 `resolve()` previously returned an array describing the matched route. It now
-returns an `InitPHP\Router\Route` object (or `null` when nothing matches).
+returns an [`InitPHP\Router\Route`](API-Reference.md#route) object (or `null` when
+nothing matches).
 
 ```php
 // 1.x
-$route = $router->resolve('GET', $url);
+$route   = $router->resolve('GET', $url);
 $handler = $route['execute'];
 $args    = $route['arguments'];
 
@@ -73,12 +75,11 @@ script. In 2.0 it **halts the pipeline** and returns the current response, which
 flows back through `dispatch()` to your emitter — no process-level exit.
 
 ```php
-// 1.x: returning null killed the script.
 // 2.0: returning null stops the pipeline and returns the current response.
 public function before($request, $response, array $args): ?ResponseInterface
 {
     if ($blocked) {
-        return $response->withStatus(403); // preferred: return an explicit response
+        return $response->withStatus(403); // preferred: an explicit response
     }
     return $response;
 }

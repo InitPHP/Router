@@ -1,8 +1,8 @@
-# Route parameters & patterns
+# Route Parameters
 
 Route paths can contain **parameters**. A parameter compiles to a capturing
 group, and whatever it captures is passed to your handler (see
-[Dependency injection](./dependency-injection.md)).
+[Dependency Injection](Dependency-Injection.md)).
 
 There are two parameter syntaxes, and they behave differently.
 
@@ -13,7 +13,7 @@ just a label; it does **not** constrain the value.
 
 ```php
 $router->get('/users/{id}', function ($id) {
-    return 'User ' . $id; // $id is whatever was in that segment: "42", "abc", ...
+    return 'User ' . $id; // "42", "abc", ... — anything in that segment
 });
 ```
 
@@ -34,7 +34,7 @@ $router->get('/users/:id', function ($id) {
 ### Built-in types
 
 | Pattern | Matches |
-|---|---|
+| --- | --- |
 | `:any` | any non-slash segment |
 | `:id`, `:int` | digits |
 | `:number`, `:float` | numbers (incl. sign / decimals) |
@@ -45,8 +45,9 @@ $router->get('/users/:id', function ($id) {
 | `:locale` | `en` or `en-US` / `en_US` |
 | `:everything` | everything, including slashes |
 
-> The `{name}` form of these (e.g. `{id}`) does **not** apply the constraint —
-> it always matches any non-slash segment. Use the `:type` form to constrain.
+> **Important:** the `{name}` form of these (e.g. `{id}`) does **not** apply the
+> constraint — it always matches any non-slash segment. Use the `:type` form to
+> constrain a value.
 
 To reuse the same type more than once in a path, append a digit: `:id`, `:id2`,
 `:id3` all match digits.
@@ -88,6 +89,6 @@ $router->get('/admin/{slug}?', 'AdminController@show')->name('admin');
 
 This matches both `/admin/` and `/admin/dashboard`. When generating a URL for a
 route with an optional parameter, unused optional segments are stripped — see
-[Named routes & URLs](./named-routes.md).
+[Named Routes & URLs](Named-Routes-and-URLs.md).
 
-Next: [Route groups](./groups.md).
+Next: [Route Groups](Route-Groups.md).

@@ -1,8 +1,8 @@
-# Route groups
+# Route Groups
 
-Groups let you apply a shared concern — a path prefix, a domain, a port or a
-client-IP restriction — to every route registered inside a callback. The
-callback receives the router.
+Groups apply a shared concern — a path prefix, a domain, a port or a client-IP
+restriction — to every route registered inside a callback. The callback receives
+the router.
 
 Groups can be nested, and nested prefixes/name-prefixes accumulate.
 
@@ -10,8 +10,8 @@ Groups can be nested, and nested prefixes/name-prefixes accumulate.
 
 ```php
 $router->group('/admin', function (Router $route) {
-    $route->get('/', 'AdminController@dashboard');     // /admin/
-    $route->get('/users', 'AdminController@users');    // /admin/users
+    $route->get('/', 'AdminController@dashboard');  // /admin/
+    $route->get('/users', 'AdminController@users'); // /admin/users
 });
 ```
 
@@ -20,14 +20,14 @@ Nested groups combine their prefixes:
 ```php
 $router->group('/admin', function (Router $route) {
     $route->group('/posts', function (Router $route) {
-        $route->get('/', 'PostController@index');      // /admin/posts/
+        $route->get('/', 'PostController@index');         // /admin/posts/
         $route->delete('/{id}', 'PostController@delete'); // /admin/posts/{id}
     });
 });
 ```
 
 Pass an `as` option to prefix the **names** of routes in the group (see
-[Named routes & URLs](./named-routes.md)):
+[Named Routes & URLs](Named-Routes-and-URLs.md)):
 
 ```php
 $router->group('/admin', function (Router $route) {
@@ -71,11 +71,11 @@ $router->ip(['10.0.0.1', '10.0.0.2'], function (Router $route) {
 });
 ```
 
-Requests from any other address simply do not match these routes (so they fall
-through to a 404 unless another route matches). The client IP is taken from the
-server parameters — see the [Upgrade guide](./upgrading-1.x-to-2.0.md) for how
-this is detected. An invalid IP address throws
-`InitPHP\Router\Exception\InvalidArgumentException`.
+Requests from any other address simply do not match these routes, so they fall
+through to a 404 unless another route matches. An invalid IP address throws
+[`InvalidArgumentException`](Exceptions.md). See
+[Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#client-ip-detection) for how the
+client IP is detected.
 
 ## Combining groups
 
@@ -89,4 +89,4 @@ $router->domain('{tenant}.example.com', function (Router $route) {
 });
 ```
 
-Next: [Controllers](./controllers.md).
+Next: [Controllers](Controllers.md).

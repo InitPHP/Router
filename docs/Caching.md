@@ -47,5 +47,7 @@ $response = $router->dispatch();
   if your routes use closure handlers.
 - Delete the cache file (or wait for the TTL) after changing your routes.
 - A write failure is reported as a warning and never interrupts the response.
+- The cache is read with `allowed_classes: false`, so it never instantiates
+  arbitrary objects from the cache file.
 
-Next: [Upgrading from 1.x to 2.0](./upgrading-1.x-to-2.0.md).
+Next: [API Reference](API-Reference.md).

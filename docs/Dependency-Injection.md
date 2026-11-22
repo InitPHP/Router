@@ -1,4 +1,4 @@
-# Dependency injection
+# Dependency Injection
 
 When the router invokes a handler (closure or controller method), it builds the
 argument list automatically.
@@ -14,7 +14,7 @@ For each parameter, in order:
 2. **Built-in / untyped parameter**: filled from the next captured route value, then a default value, then `null` if the parameter is nullable.
 
 If a required built-in parameter cannot be filled, a
-`InitPHP\Router\Exception\RouterException` is thrown.
+[`RouterException`](Exceptions.md) is thrown.
 
 ```php
 $router->get('/users/{id}', function (Request $request, Response $response, $id) {
@@ -40,12 +40,12 @@ $router->get('/report', function (ReportService $reports) {
 ```
 
 Constructor parameters that cannot be resolved (e.g. a required scalar with no
-value) cause a `RouterException`.
+value) cause a [`RouterException`](Exceptions.md).
 
 ## Using a PSR-11 container
 
 Pass a [PSR-11](https://www.php-fig.org/psr/psr-11/) `ContainerInterface` and the
-router will resolve controllers and class-typed dependencies through it:
+router resolves controllers and class-typed dependencies through it:
 
 ```php
 use Psr\Container\ContainerInterface;
@@ -64,8 +64,8 @@ itself.
 ## Fresh request/response instances
 
 By default, a parameter type-hinted with your concrete request/response class
-receives the **shared** instance. Set `argument_new_instance` to `true` to
-inject a freshly constructed instance instead:
+receives the **shared** instance. Set `argument_new_instance` to `true` to inject
+a freshly constructed instance instead:
 
 ```php
 $router = new Router($request, $response, ['argument_new_instance' => true]);
@@ -74,4 +74,4 @@ $router = new Router($request, $response, ['argument_new_instance' => true]);
 This only affects request/response-typed parameters; the concrete class must be
 constructible for a new instance to be produced.
 
-Next: [Middleware](./middleware.md).
+Next: [Middleware](Middleware.md).

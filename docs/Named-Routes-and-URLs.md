@@ -1,4 +1,4 @@
-# Named routes & URLs
+# Named Routes & URLs
 
 Naming a route lets you generate its URL later without hard-coding paths.
 
@@ -13,8 +13,7 @@ $router->get('/users/{id}', 'UserController@show')->name('users.show');
 $router->get('/users/{id}', 'UserController@show', ['name' => 'users.show']);
 ```
 
-Names must be unique; a duplicate throws
-`InitPHP\Router\Exception\RouterException`.
+Names must be unique; a duplicate throws [`RouterException`](Exceptions.md).
 
 Inside a group, the `as` option prefixes the names of routes registered in it:
 
@@ -45,14 +44,14 @@ $router->route('articles.show', ['id' => 7, 'slug' => 'hello-world']);
 
 ## Optional segments
 
-When a named route has [optional parameters](./route-parameters.md#optional-parameters),
+When a named route has [optional parameters](Route-Parameters.md#optional-parameters),
 unused optional segments are stripped from the generated URL:
 
 ```php
 $router->get('/admin/{slug}?', 'AdminController@show')->name('admin');
 
-$router->route('admin');                       // => http://your-host/admin/
+$router->route('admin');                        // => http://your-host/admin/
 $router->route('admin', ['slug' => 'reports']); // => http://your-host/admin/reports
 ```
 
-Next: [Static file links](./static-file-links.md).
+Next: [Dependency Injection](Dependency-Injection.md).

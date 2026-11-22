@@ -1,6 +1,6 @@
-# Getting started
+# Quick Start
 
-## The request/response lifecycle
+## The lifecycle
 
 The router sits between an incoming PSR-7 **request** and an outgoing PSR-7
 **response**. You give it both, register routes, then call `dispatch()`, which
@@ -26,24 +26,25 @@ $router->get('/', function () {
     return 'Hello World!';
 });
 
-$router->get('/posts/{id}', function ($id) {
-    return 'Post #' . $id;
+$router->post('/login', function (Request $request, Response $response) {
+    return $response->withStatus(401);
 });
 
-// 4. Resolve the current request into a response.
-$response = $router->dispatch();
+// 4. (Optional) customise the 404 response.
+$router->setNotFoundHandler(function () {
+    return 'Page Not Found';
+});
 
-// 5. Emit it.
-(new Emitter())->emit($response);
+// 5. Resolve the current request and emit the response.
+(new Emitter())->emit($router->dispatch());
 ```
 
 ## What a handler can return
 
-Inside `dispatch()` the matched handler is invoked and its result is folded into
-the response:
+The matched handler is invoked and its result is folded into the response:
 
 | Return value | Behaviour |
-|---|---|
+| --- | --- |
 | `string` (or anything stringable) | Written to the response body |
 | A PSR-7 `ResponseInterface` | Used as the new response |
 | A PSR-7 `StreamInterface` | Set as the response body |
@@ -64,30 +65,22 @@ $router->get('/echo', function () {
 
 ## Handler arguments
 
-Handler parameters are resolved automatically:
-
-- **Class-typed** parameters receive the shared request/response (or a service —
-  see [Dependency injection](./dependency-injection.md)).
-- **Other** parameters are filled, in order, from the values captured in the
-  route path.
+Parameters are resolved automatically — class-typed parameters get the shared
+request/response (or a service), and the rest are filled from the captured path
+values:
 
 ```php
 $router->get('/users/{id}', function (Request $request, $id) {
-    // $request -> the current request, $id -> the captured path segment
     return 'User ' . $id;
 });
 ```
 
-## What happens when nothing matches
+See [Dependency Injection](Dependency-Injection.md) for the full rules.
 
-If no route matches and you have **not** set a 404 handler, `dispatch()` throws
-`InitPHP\Router\Exception\PageNotFoundException`. Define a handler to control the
-response instead — see [Error handling](./error-handling.md):
+## When nothing matches
 
-```php
-$router->setNotFoundHandler(function (Request $request, Response $response) {
-    return $response->withStatus(404);
-});
-```
+If no route matches and no 404 handler is set, `dispatch()` throws
+[`PageNotFoundException`](Exceptions.md). Define a handler to control the response —
+see [Error Handling](Error-Handling.md).
 
-Next: [Configuration](./configuration.md).
+Next: [Configuration](Configuration.md).

@@ -7,18 +7,18 @@ Each supported method has a dedicated helper. They all share the signature
 chaining.
 
 ```php
-$router->get('/',            $handler);
-$router->post('/login',      $handler);
-$router->put('/users/{id}',  $handler);
+$router->get('/',             $handler);
+$router->post('/login',       $handler);
+$router->put('/users/{id}',   $handler);
 $router->patch('/users/{id}', $handler);
 $router->delete('/users/{id}', $handler);
-$router->options('/users',   $handler);
-$router->head('/health',     $handler);
-$router->any('/webhook',     $handler); // matches every HTTP method
+$router->options('/users',    $handler);
+$router->head('/health',      $handler);
+$router->any('/webhook',      $handler); // matches every HTTP method
 ```
 
 `$handler` may be a closure, a `Controller@method` string, or an array — see
-[Controllers](./controllers.md).
+[Controllers](Controllers.md).
 
 ## `register()` and `add()`
 
@@ -32,12 +32,12 @@ $router->add('GET|POST', '/search', $handler);
 
 Supported methods: `GET`, `POST`, `PUT`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`,
 `ANY`, `LINK`. An unsupported method throws
-`InitPHP\Router\Exception\InvalidArgumentException`.
+[`InvalidArgumentException`](Exceptions.md).
 
 ## The fluent API
 
 Most registration methods return `$this`, so calls chain — including the
-modifiers `name()`, `filter()`/`middleware()`, `pattern()`/`where()`:
+modifiers `name()`, `filter()`/`middleware()` and `pattern()`/`where()`:
 
 ```php
 $router->get('/articles/{id}', 'ArticleController@show')
@@ -49,22 +49,25 @@ $router->get('/articles/{id}', 'ArticleController@show')
 `name()`, `filter()` and `middleware()` apply to the **most recently registered**
 route.
 
-## `any()` and method matching
+## How matching works
 
-When resolving a request, candidate routes are: the routes registered for the
+When resolving a request, the candidate routes are the routes registered for the
 request method, plus all `ANY` routes, plus all `LINK` routes (see
-[Static file links](./static-file-links.md)). When several routes match the same
-URL, the most specific one wins (longer paths and more captured parameters rank
-higher).
+[Static File Links](Static-File-Links.md)). When several routes match the same URL,
+the most specific one wins — longer paths and more captured parameters rank
+higher.
+
+`dispatch()` performs this resolution and runs the matched route;
+`resolve(string $method, string $url)` returns the matched
+[`Route`](API-Reference.md#route) object (or `null`) without running it.
 
 ## Inspecting registered routes
 
-`getRoutes()` returns the registered routes as plain arrays — handy for
-debugging or building a route list:
+`getRoutes()` returns the registered routes as plain arrays:
 
 ```php
-$all      = $router->getRoutes();        // grouped by HTTP method
-$gets     = $router->getRoutes('GET');   // only GET routes, keyed by path
+$all  = $router->getRoutes();      // grouped by HTTP method
+$gets = $router->getRoutes('GET'); // only GET routes, keyed by path
 ```
 
-Next: [Route parameters & patterns](./route-parameters.md).
+Next: [Route Parameters](Route-Parameters.md).

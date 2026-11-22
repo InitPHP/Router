@@ -1,9 +1,9 @@
-# Error handling
+# Error Handling
 
 ## 404 — no matching route
 
 If no route matches the request and no 404 handler is defined, `dispatch()`
-throws `InitPHP\Router\Exception\PageNotFoundException`.
+throws [`PageNotFoundException`](Exceptions.md).
 
 Define a handler with `setNotFoundHandler()` to control the response instead. The
 handler is a closure or controller reference, just like a route handler, and the
@@ -20,19 +20,12 @@ $router->setNotFoundHandler('ErrorController@notFound');
 ```
 
 > `error_404()` is a deprecated alias of `setNotFoundHandler()`, kept for
-> backwards compatibility. See the [Upgrade guide](./upgrading-1.x-to-2.0.md).
+> backwards compatibility. See [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md).
 
-## Exception hierarchy
+## Catching exceptions
 
-All router exceptions live under `InitPHP\Router\Exception`:
-
-| Exception | Extends | Thrown when |
-|---|---|---|
-| `RouterException` | `\RuntimeException` | a controller/middleware can't be resolved, a route name is duplicated, a filter is invalid, etc. |
-| `PageNotFoundException` | `RouterException` | no route matched and no 404 handler is set |
-| `InvalidArgumentException` | `\InvalidArgumentException` | an argument has an invalid type/value (unsupported method, bad handler, invalid IP, missing link source) |
-
-Catch `RouterException` to handle both router runtime errors and 404s:
+All router exceptions extend `InitPHP\Router\Exception\RouterException` (except
+`InvalidArgumentException`). See [Exceptions](Exceptions.md) for the full hierarchy.
 
 ```php
 use InitPHP\Router\Exception\PageNotFoundException;
@@ -54,9 +47,9 @@ try {
 After `dispatch()`, you can inspect what handled the request:
 
 ```php
-$router->getCurrentController();        // controller class, '__CALLABLE__', or null
-$router->getCurrentControllerMethod();  // method name, '' for closures, or null
-$router->getCurrentArguments();         // the captured route arguments
+$router->getCurrentController();       // controller class, '__CALLABLE__', or null
+$router->getCurrentControllerMethod(); // method name, '' for closures, or null
+$router->getCurrentArguments();        // the captured route arguments
 ```
 
-Next: [Caching](./caching.md).
+Next: [Caching](Caching.md).
