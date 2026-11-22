@@ -39,11 +39,11 @@ final class RouteCollectionTest extends TestCase
         $collection->add(new Route($collection->nextId(), ['LINK'], '/link', 'src'));
         $collection->add(new Route($collection->nextId(), ['POST'], '/p', 'h'));
 
-        $candidatePaths = array_map(static fn (Route $r): string => $r->getPath(), $collection->candidates('GET'));
+        $candidatePaths = array_map(static fn(Route $r): string => $r->getPath(), $collection->candidates('GET'));
         sort($candidatePaths);
         $this->assertSame(['/any', '/g', '/link'], $candidatePaths);
 
-        $ofGet = array_map(static fn (Route $r): string => $r->getPath(), $collection->ofMethod('GET'));
+        $ofGet = array_map(static fn(Route $r): string => $r->getPath(), $collection->ofMethod('GET'));
         $this->assertSame(['/g'], $ofGet);
     }
 

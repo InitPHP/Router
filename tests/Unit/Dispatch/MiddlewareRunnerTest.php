@@ -36,10 +36,10 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
     public function testCallableFilterReplacesResponseAndContinues(): void
     {
         $result = $this->runner()->run(
-            [static fn ($req, ResponseInterface $res, $args): ResponseInterface => $res->withHeader('X-Test', 'yes')],
+            [static fn($req, ResponseInterface $res, $args): ResponseInterface => $res->withHeader('X-Test', 'yes')],
             $this->response,
             [],
-            true
+            true,
         );
 
         $this->assertFalse($result->halted);
@@ -49,10 +49,10 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
     public function testNonSuccessResponseHaltsThePipeline(): void
     {
         $result = $this->runner()->run(
-            [static fn ($req, ResponseInterface $res, $args): ResponseInterface => $res->withStatus(403)],
+            [static fn($req, ResponseInterface $res, $args): ResponseInterface => $res->withStatus(403)],
             $this->response,
             [],
-            true
+            true,
         );
 
         $this->assertTrue($result->halted);
@@ -63,10 +63,10 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
     {
         // B3 regression: returning null used to call exit() and kill the process.
         $result = $this->runner()->run(
-            [static fn ($req, $res, $args) => null],
+            [static fn($req, $res, $args) => null],
             $this->response,
             [],
-            true
+            true,
         );
 
         $this->assertTrue($result->halted);
@@ -77,10 +77,10 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectException(RouterException::class);
         $this->runner()->run(
-            [static fn ($req, $res, $args): string => 'nope'],
+            [static fn($req, $res, $args): string => 'nope'],
             $this->response,
             [],
-            true
+            true,
         );
     }
 
@@ -116,16 +116,16 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame(
             ['GlobalBefore', 'GlobalFilter', 'IndexBefore'],
-            $runner->controllerMiddlewares($controller, 'index', true)
+            $runner->controllerMiddlewares($controller, 'index', true),
         );
         $this->assertSame(
             ['GlobalAfter', 'GlobalFilter', 'IndexAfter'],
-            $runner->controllerMiddlewares($controller, 'index', false)
+            $runner->controllerMiddlewares($controller, 'index', false),
         );
         // A method without its own entry gets only the global filters.
         $this->assertSame(
             ['GlobalBefore', 'GlobalFilter'],
-            $runner->controllerMiddlewares($controller, 'other', true)
+            $runner->controllerMiddlewares($controller, 'other', true),
         );
     }
 
@@ -136,7 +136,7 @@ final class MiddlewareRunnerTest extends \PHPUnit\Framework\TestCase
             $this->response,
             [],
             true,
-            ['namespaces' => ['middleware' => 'Tests\\Router\\Unit\\Fixtures']]
+            ['namespaces' => ['middleware' => 'Tests\\Router\\Unit\\Fixtures']],
         );
 
         $this->assertSame('ran', $result->response->getHeaderLine('X-Before'));

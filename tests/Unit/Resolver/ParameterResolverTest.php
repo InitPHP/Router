@@ -36,14 +36,14 @@ final class ParameterResolverTest extends TestCase
 
     public function testFillsBuiltinParametersFromPositionalArguments(): void
     {
-        $fn = new ReflectionFunction(static fn ($id, $slug) => null);
+        $fn = new ReflectionFunction(static fn($id, $slug) => null);
 
         $this->assertSame(['5', 'admin'], $this->resolver()->forReflection($fn, ['5', 'admin'], $this->response));
     }
 
     public function testInjectsSharedRequestAndResponseByType(): void
     {
-        $fn = new ReflectionFunction(static fn (RequestInterface $req, ResponseInterface $res) => null);
+        $fn = new ReflectionFunction(static fn(RequestInterface $req, ResponseInterface $res) => null);
 
         $args = $this->resolver()->forReflection($fn, [], $this->response);
 
@@ -53,14 +53,14 @@ final class ParameterResolverTest extends TestCase
 
     public function testUsesDefaultValueWhenNoArgumentProvided(): void
     {
-        $fn = new ReflectionFunction(static fn ($page = 1) => null);
+        $fn = new ReflectionFunction(static fn($page = 1) => null);
 
         $this->assertSame([1], $this->resolver()->forReflection($fn, [], $this->response));
     }
 
     public function testUsesNullForNullableParameterWithoutArgument(): void
     {
-        $fn = new ReflectionFunction(static fn (?string $q) => null);
+        $fn = new ReflectionFunction(static fn(?string $q) => null);
 
         $this->assertSame([null], $this->resolver()->forReflection($fn, [], $this->response));
     }
@@ -69,7 +69,7 @@ final class ParameterResolverTest extends TestCase
     {
         // B5 regression: previously the parameter was silently skipped, which
         // shifted positional arguments and caused an ArgumentCountError later.
-        $fn = new ReflectionFunction(static fn (string $required) => null);
+        $fn = new ReflectionFunction(static fn(string $required) => null);
 
         $this->expectException(RouterException::class);
         $this->resolver()->forReflection($fn, [], $this->response);
@@ -94,9 +94,7 @@ final class ParameterResolverTest extends TestCase
     {
         $sentinel = new PlainService();
         $container = new class ($sentinel) implements ContainerInterface {
-            public function __construct(private PlainService $service)
-            {
-            }
+            public function __construct(private PlainService $service) {}
 
             public function get(string $id): mixed
             {
@@ -116,7 +114,7 @@ final class ParameterResolverTest extends TestCase
 
     public function testMakeFallsBackToInstantiationWhenContainerReturnsNonObject(): void
     {
-        $container = new class () implements ContainerInterface {
+        $container = new class implements ContainerInterface {
             public function get(string $id): mixed
             {
                 return 'not-an-object';
@@ -152,7 +150,7 @@ final class ParameterResolverTest extends TestCase
         // argument_new_instance on: the shared request/response shortcut is off,
         // and a non-instantiable interface type cannot be built, so it is
         // skipped (whereas with the flag off the shared response is injected).
-        $fn = new ReflectionFunction(static fn (ResponseInterface $res) => $res);
+        $fn = new ReflectionFunction(static fn(ResponseInterface $res) => $res);
 
         $this->assertSame([], $this->resolver(null, true)->forReflection($fn, [], $this->response));
         $this->assertSame([$this->response], $this->resolver(null, false)->forReflection($fn, [], $this->response));

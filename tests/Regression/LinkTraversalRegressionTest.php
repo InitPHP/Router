@@ -21,7 +21,7 @@ final class LinkTraversalRegressionTest extends RegressionTestCase
         parent::setUp();
 
         $this->base = sys_get_temp_dir() . '/router-regression-' . bin2hex(random_bytes(6));
-        mkdir($this->base . '/public', 0777, true);
+        mkdir($this->base . '/public', 0o777, true);
         file_put_contents($this->base . '/public/app.css', 'body{}');
         file_put_contents($this->base . '/secret.txt', 'TOPSECRET');
     }
@@ -49,7 +49,7 @@ final class LinkTraversalRegressionTest extends RegressionTestCase
 
         $this->assertNull(
             $resolved,
-            'A4: a path-traversal request must not match a directory link.'
+            'A4: a path-traversal request must not match a directory link.',
         );
     }
 
@@ -62,7 +62,7 @@ final class LinkTraversalRegressionTest extends RegressionTestCase
 
         $this->assertNotNull(
             $router->resolve('GET', 'http://localhost/assets/app.css'),
-            'A legitimate file inside the link root must still match.'
+            'A legitimate file inside the link root must still match.',
         );
     }
 }

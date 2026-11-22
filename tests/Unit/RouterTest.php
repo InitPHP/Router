@@ -506,7 +506,7 @@ class RouterTest extends \PHPUnit\Framework\TestCase
      */
     public function testThrowsRouteResolveNotFound(
         string $uri,
-        string $method
+        string $method,
     ) {
         $this->router->get('/', ['Main', 'index']);
         $this->router->post('/about', ['Main', 'about']);

@@ -47,9 +47,7 @@ final class ReadinessLinter
      */
     private const READINESS_PATH_HINTS = ['/readyz', '/ready', '/readiness'];
 
-    public function __construct(private ?HealthRegistry $registry = null)
-    {
-    }
+    public function __construct(private ?HealthRegistry $registry = null) {}
 
     /**
      * Inspect $router and produce a readiness report.
@@ -73,7 +71,7 @@ final class ReadinessLinter
                 LintSeverity::ERROR,
                 'No liveness endpoint is registered. Expose a "/healthz"-style route '
                 . '(e.g. via HealthEndpoints::registerLiveness()) so orchestrators can '
-                . 'tell whether the process is alive.'
+                . 'tell whether the process is alive.',
             );
         }
 
@@ -83,7 +81,7 @@ final class ReadinessLinter
                 LintSeverity::ERROR,
                 'No readiness endpoint is registered. Expose a "/readyz"-style route '
                 . '(e.g. via HealthEndpoints::registerReadiness()) so load balancers '
-                . 'only send traffic once dependencies are ready.'
+                . 'only send traffic once dependencies are ready.',
             );
         } elseif ($this->registry !== null && $this->registry->count() < 1) {
             $findings[] = new LintFinding(
@@ -91,7 +89,7 @@ final class ReadinessLinter
                 LintSeverity::ERROR,
                 'The readiness endpoint has no registered checks; it would always '
                 . 'report ready. Register at least one dependency check '
-                . '(e.g. db-ping, cache-ping) on the HealthRegistry.'
+                . '(e.g. db-ping, cache-ping) on the HealthRegistry.',
             );
         }
 

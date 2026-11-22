@@ -26,7 +26,7 @@ request/response implementation.
 
 ## Requirements
 
-- PHP 8.1 or later
+- PHP 8.2 or later
 - Any [PSR-7](https://www.php-fig.org/psr/psr-7/) HTTP message implementation and a PSR-7 emitter. The examples below use [InitPHP HTTP](https://github.com/InitPHP/HTTP).
 - For pretty URLs, a front controller (`index.php`) with URL rewriting (see below).
 

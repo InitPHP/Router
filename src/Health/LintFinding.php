@@ -36,9 +36,8 @@ final class LintFinding
     public function __construct(
         public readonly string $code,
         public readonly LintSeverity $severity,
-        public readonly string $message
-    ) {
-    }
+        public readonly string $message,
+    ) {}
 
     /**
      * The JSON-serialisable shape of this finding.

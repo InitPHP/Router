@@ -37,9 +37,8 @@ final class MiddlewareRunner
 
     public function __construct(
         private RequestInterface $request,
-        private ParameterResolver $resolver
-    ) {
-    }
+        private ParameterResolver $resolver,
+    ) {}
 
     /**
      * @param array<int, string|callable> $filters
@@ -51,7 +50,7 @@ final class MiddlewareRunner
         ResponseInterface $response,
         array $arguments,
         bool $before,
-        array $routeOptions = []
+        array $routeOptions = [],
     ): MiddlewareResult {
         $alreadyRun = [];
         foreach ($filters as $filter) {
@@ -85,7 +84,7 @@ final class MiddlewareRunner
             throw new RouterException(\sprintf(
                 'The "%s" filter must return a %s or null.',
                 $label,
-                ResponseInterface::class
+                ResponseInterface::class,
             ));
         }
 

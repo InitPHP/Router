@@ -28,9 +28,8 @@ final class CheckResult
     public function __construct(
         public readonly string $name,
         public readonly bool $ok,
-        public readonly ?string $detail = null
-    ) {
-    }
+        public readonly ?string $detail = null,
+    ) {}
 
     /**
      * A passing result for $name, with an optional detail.

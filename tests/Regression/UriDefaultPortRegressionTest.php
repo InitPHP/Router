@@ -23,7 +23,7 @@ final class UriDefaultPortRegressionTest extends TestCase
         $this->assertSame(
             'http://example.com/path',
             $uri->__toString(),
-            'A2: the default HTTP port (80) must not appear in the generated URI.'
+            'A2: the default HTTP port (80) must not appear in the generated URI.',
         );
     }
 
@@ -34,7 +34,7 @@ final class UriDefaultPortRegressionTest extends TestCase
         $this->assertSame(
             'https://example.com/path',
             $uri->__toString(),
-            'A2: the default HTTPS port (443) must not appear in the generated URI.'
+            'A2: the default HTTPS port (443) must not appear in the generated URI.',
         );
     }
 

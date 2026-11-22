@@ -30,7 +30,7 @@ final class MiddlewareTest extends \PHPUnit\Framework\TestCase
     public function testClassMiddlewareRunsBeforeAndAfterByDefault(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'body')->filter(HeaderMiddleware::class);
+        $router->get('/', static fn(): string => 'body')->filter(HeaderMiddleware::class);
 
         $response = $router->dispatch();
 
@@ -42,7 +42,7 @@ final class MiddlewareTest extends \PHPUnit\Framework\TestCase
     public function testBeforeOnlyPositionRunsOnlyBefore(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'body')->filter(HeaderMiddleware::class, Router::BEFORE);
+        $router->get('/', static fn(): string => 'body')->filter(HeaderMiddleware::class, Router::BEFORE);
 
         $response = $router->dispatch();
 
@@ -53,10 +53,10 @@ final class MiddlewareTest extends \PHPUnit\Framework\TestCase
     public function testCallableBeforeFilterRuns(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'body')->filter(
-            static fn ($request, ResponseInterface $response, array $arguments): ResponseInterface
+        $router->get('/', static fn(): string => 'body')->filter(
+            static fn($request, ResponseInterface $response, array $arguments): ResponseInterface
                 => $response->withHeader('X-Callable', 'yes'),
-            Router::BEFORE
+            Router::BEFORE,
         );
 
         $this->assertSame('yes', $router->dispatch()->getHeaderLine('X-Callable'));
@@ -65,7 +65,7 @@ final class MiddlewareTest extends \PHPUnit\Framework\TestCase
     public function testNonSuccessfulBeforeResponseShortCircuitsTheHandler(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'should-not-run')->filter(UnauthorizedMiddleware::class, Router::BEFORE);
+        $router->get('/', static fn(): string => 'should-not-run')->filter(UnauthorizedMiddleware::class, Router::BEFORE);
 
         $response = $router->dispatch();
 
@@ -87,9 +87,9 @@ final class MiddlewareTest extends \PHPUnit\Framework\TestCase
     public function testFilterReturningNeitherResponseNorNullThrows(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'body')->filter(
-            static fn ($request, $response, array $arguments): string => 'not-a-response',
-            Router::BEFORE
+        $router->get('/', static fn(): string => 'body')->filter(
+            static fn($request, $response, array $arguments): string => 'not-a-response',
+            Router::BEFORE,
         );
 
         $this->expectException(RouterException::class);

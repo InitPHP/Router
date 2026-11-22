@@ -41,7 +41,7 @@ final class RequestContext
         bool $variableMethod = false,
         array $supportedMethods = [],
         ?array $serverParams = null,
-        ?array $requestParams = null
+        ?array $requestParams = null,
     ) {
         $serverParams ??= $_SERVER;
         $requestParams ??= $_REQUEST;
@@ -68,7 +68,7 @@ final class RequestContext
         RequestInterface $request,
         bool $variableMethod,
         array $supportedMethods,
-        array $requestParams
+        array $requestParams,
     ): string {
         $method = \strtoupper($request->getMethod());
         if (!$variableMethod || !isset($requestParams['_method'])) {

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- **Requires PHP `^8.2`.** Support for PHP 8.1 is dropped; CI now runs PHP 8.2, 8.3, 8.4 and 8.5.
+- **Coding standard moved to PER-CS** through the shared `.php-cs-fixer.dist.php`; the whole code base was reformatted.
+
+### Fixed
+
+- Removed two stale PHPStan baseline entries (`if.alwaysFalse`) that newer PHPStan releases report as unmatched, which kept the static analysis job on `main` red.
+
 ## [2.1.0] - 2026-06-20
 
 ### Added

@@ -19,6 +19,4 @@ namespace InitPHP\Router\Exception;
  * Base exception for all router runtime errors (unresolved controllers or
  * middleware, duplicate route names, invalid filters, cache I/O, etc.).
  */
-class RouterException extends \RuntimeException
-{
-}
+class RouterException extends \RuntimeException {}

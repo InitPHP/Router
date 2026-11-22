@@ -36,13 +36,13 @@ final class ReadinessLinterTest extends TestCase
      */
     private function codes(array $findings): array
     {
-        return array_map(static fn (LintFinding $f): string => $f->code, $findings);
+        return array_map(static fn(LintFinding $f): string => $f->code, $findings);
     }
 
     public function testPassesWhenBothEndpointsExistWithACheck(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db-ping', static fn (): bool => true);
+        $registry->register('db-ping', static fn(): bool => true);
 
         $router = $this->router();
         (new HealthEndpoints($registry))->register($router);
@@ -57,7 +57,7 @@ final class ReadinessLinterTest extends TestCase
     public function testFlagsMissingBothEndpoints(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'home');
+        $router->get('/', static fn(): string => 'home');
 
         $report = (new ReadinessLinter())->lint($router);
 
@@ -70,7 +70,7 @@ final class ReadinessLinterTest extends TestCase
     public function testFlagsMissingLivenessOnly(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db-ping', static fn (): bool => true);
+        $registry->register('db-ping', static fn(): bool => true);
 
         $router = $this->router();
         (new HealthEndpoints($registry))->registerReadiness($router);
@@ -116,8 +116,8 @@ final class ReadinessLinterTest extends TestCase
         // No HealthEndpoints tag, just conventional paths — the linter's path
         // heuristic must still recognise them. No registry => skip the check count.
         $router = $this->router();
-        $router->get('/healthz', static fn (): string => 'ok');
-        $router->get('/readyz', static fn (): string => 'ready');
+        $router->get('/healthz', static fn(): string => 'ok');
+        $router->get('/readyz', static fn(): string => 'ready');
 
         $report = (new ReadinessLinter())->lint($router);
 

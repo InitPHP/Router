@@ -34,17 +34,17 @@ final class ReDispatchRegressionTest extends RegressionTestCase
 
         try {
             $first = $this->makeRouter('http://localhost/');
-            $first->get('/', static fn (): string => 'first');
+            $first->get('/', static fn(): string => 'first');
             $first->dispatch();
 
             $second = $this->makeRouter('http://localhost/');
-            $second->get('/', static fn (): string => 'second');
+            $second->get('/', static fn(): string => 'second');
             $response = $second->dispatch();
 
             $this->assertInstanceOf(
                 ResponseInterface::class,
                 $response,
-                'A3: a second dispatch in the same process must not redefine global constants.'
+                'A3: a second dispatch in the same process must not redefine global constants.',
             );
         } finally {
             restore_error_handler();

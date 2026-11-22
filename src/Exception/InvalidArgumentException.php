@@ -19,6 +19,4 @@ namespace InitPHP\Router\Exception;
  * Thrown when a router method receives an argument of an invalid type or value
  * (an unsupported HTTP method, a bad handler type, an invalid IP address, ...).
  */
-class InvalidArgumentException extends \InvalidArgumentException
-{
-}
+class InvalidArgumentException extends \InvalidArgumentException {}

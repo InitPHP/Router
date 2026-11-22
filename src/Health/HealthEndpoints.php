@@ -47,9 +47,7 @@ final class HealthEndpoints
 
     public const DEFAULT_READINESS_PATH = '/readyz';
 
-    public function __construct(private HealthRegistry $registry)
-    {
-    }
+    public function __construct(private HealthRegistry $registry) {}
 
     /**
      * The readiness-check registry backing the `/readyz` endpoint. Register your
@@ -71,7 +69,7 @@ final class HealthEndpoints
     public function register(
         Router $router,
         string $livenessPath = self::DEFAULT_LIVENESS_PATH,
-        string $readinessPath = self::DEFAULT_READINESS_PATH
+        string $readinessPath = self::DEFAULT_READINESS_PATH,
     ): self {
         $this->registerLiveness($router, $livenessPath);
         $this->registerReadiness($router, $readinessPath);
@@ -93,7 +91,7 @@ final class HealthEndpoints
             function (ResponseInterface $response): ResponseInterface {
                 return $this->json($response, 200, ['status' => 'ok']);
             },
-            [self::OPTION_KEY => self::KIND_LIVENESS]
+            [self::OPTION_KEY => self::KIND_LIVENESS],
         );
 
         return $this;
@@ -116,7 +114,7 @@ final class HealthEndpoints
 
                 return $this->json($response, $report->statusCode(), $report->toArray());
             },
-            [self::OPTION_KEY => self::KIND_READINESS]
+            [self::OPTION_KEY => self::KIND_READINESS],
         );
 
         return $this;

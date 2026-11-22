@@ -16,7 +16,7 @@ final class FileLinkHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->root = sys_get_temp_dir() . '/router-link-' . bin2hex(random_bytes(6));
-        mkdir($this->root . '/public', 0777, true);
+        mkdir($this->root . '/public', 0o777, true);
         file_put_contents($this->root . '/public/app.css', 'body{color:red}');
         file_put_contents($this->root . '/secret.txt', 'TOPSECRET');
     }

@@ -48,9 +48,8 @@ final class Dispatcher
         private ControllerResolver $controllers,
         private ParameterResolver $parameters,
         private MiddlewareRunner $middleware,
-        private FileLinkHandler $links
-    ) {
-    }
+        private FileLinkHandler $links,
+    ) {}
 
     /**
      * @param array<string, mixed> $notFound The 404 handler config (execute + options.arguments).
@@ -88,7 +87,7 @@ final class Dispatcher
             $parse = $this->controllers->parse($handler);
             $controller = $this->parameters->make(
                 new ReflectionClass($this->controllers->find($parse['controller'])),
-                $response
+                $response,
             );
 
             $controllerBefore = $this->middleware->run(
@@ -96,7 +95,7 @@ final class Dispatcher
                 $response,
                 $arguments,
                 true,
-                $options
+                $options,
             );
             $response = $controllerBefore->response;
             $this->currentController = \get_class($controller);
@@ -108,7 +107,7 @@ final class Dispatcher
             $response = $this->run([$controller, $parse['method']], $arguments, $response);
             $filters['after'] = \array_merge(
                 $filters['after'],
-                $this->middleware->controllerMiddlewares($controller, $parse['method'], false)
+                $this->middleware->controllerMiddlewares($controller, $parse['method'], false),
             );
         }
 
@@ -205,7 +204,7 @@ final class Dispatcher
         $parse = $this->controllers->parse($handler);
         $controller = $this->parameters->make(
             new ReflectionClass($this->controllers->find($parse['controller'])),
-            $response
+            $response,
         );
         $this->currentController = \get_class($controller);
         $this->currentControllerMethod = $parse['method'];

@@ -123,7 +123,7 @@ final class RouteCollection
         $ids = \array_unique(\array_merge(
             $this->methodIds['LINK'] ?? [],
             $this->methodIds['ANY'] ?? [],
-            $this->methodIds[$method] ?? []
+            $this->methodIds[$method] ?? [],
         ));
 
         $res = [];
@@ -153,7 +153,7 @@ final class RouteCollection
     {
         return [
             'id'        => $this->lastId,
-            'routes'    => \array_map(static fn (Route $route): array => $route->toArray(), $this->routes),
+            'routes'    => \array_map(static fn(Route $route): array => $route->toArray(), $this->routes),
             'names'     => $this->names,
             'methodIds' => $this->methodIds,
         ];

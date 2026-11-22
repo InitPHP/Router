@@ -30,9 +30,8 @@ final class HealthReport
      */
     public function __construct(
         public readonly bool $healthy,
-        public readonly array $results
-    ) {
-    }
+        public readonly array $results,
+    ) {}
 
     /**
      * The HTTP status code that represents this report: 200 when healthy,

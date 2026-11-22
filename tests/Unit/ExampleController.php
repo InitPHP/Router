@@ -18,39 +18,18 @@ namespace Tests\Router\Unit;
 
 class ExampleController
 {
-    public function index()
-    {
+    public function index() {}
 
-    }
+    public function create() {}
 
-    public function create()
-    {
+    public function store() {}
 
-    }
+    public function show($id) {}
 
-    public function store()
-    {
+    public function edit($id) {}
 
-    }
+    public function update($id) {}
 
-    public function show($id)
-    {
-
-    }
-
-    public function edit($id)
-    {
-
-    }
-
-    public function update($id)
-    {
-
-    }
-
-    public function destroy($id)
-    {
-
-    }
+    public function destroy($id) {}
 
 }

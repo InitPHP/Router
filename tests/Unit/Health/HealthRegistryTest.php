@@ -26,8 +26,8 @@ final class HealthRegistryTest extends TestCase
     public function testRegistrationBookkeeping(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db', static fn (): bool => true)
-            ->register('cache', static fn (): bool => true);
+        $registry->register('db', static fn(): bool => true)
+            ->register('cache', static fn(): bool => true);
 
         self::assertSame(2, $registry->count());
         self::assertTrue($registry->has('db'));
@@ -41,8 +41,8 @@ final class HealthRegistryTest extends TestCase
     public function testRegisteringSameNameReplaces(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db', static fn (): bool => true);
-        $registry->register('db', static fn (): bool => false);
+        $registry->register('db', static fn(): bool => true);
+        $registry->register('db', static fn(): bool => false);
 
         self::assertSame(1, $registry->count());
         self::assertFalse($registry->run()->healthy);
@@ -51,8 +51,8 @@ final class HealthRegistryTest extends TestCase
     public function testBoolTrueAndFalseAreNormalised(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('up', static fn (): bool => true);
-        $registry->register('down', static fn (): bool => false);
+        $registry->register('up', static fn(): bool => true);
+        $registry->register('down', static fn(): bool => false);
 
         $report = $registry->run();
 
@@ -71,7 +71,7 @@ final class HealthRegistryTest extends TestCase
         $registry = new HealthRegistry();
         // The check returns a CheckResult with a *different* name; the registry
         // must pin the report key to the registration name to keep them aligned.
-        $registry->register('db-ping', static fn (): CheckResult => CheckResult::ok('something-else', 'detail'));
+        $registry->register('db-ping', static fn(): CheckResult => CheckResult::ok('something-else', 'detail'));
 
         $report = $registry->run();
 
@@ -96,8 +96,8 @@ final class HealthRegistryTest extends TestCase
     public function testReportToArrayShape(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db', static fn (): CheckResult => CheckResult::ok('db'));
-        $registry->register('cache', static fn (): CheckResult => CheckResult::fail('cache', 'timeout'));
+        $registry->register('db', static fn(): CheckResult => CheckResult::ok('db'));
+        $registry->register('cache', static fn(): CheckResult => CheckResult::fail('cache', 'timeout'));
 
         $array = $registry->run()->toArray();
 
