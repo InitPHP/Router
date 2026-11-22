@@ -19,8 +19,8 @@ change. The breaking changes are below, each with a migration step.
 
 ## PHP 8.2+
 
-The minimum supported PHP version is **8.2** (2.0.0 itself required 8.1; support
-for 8.1 was dropped afterwards). Update your environment and your
+The minimum supported PHP version is **8.2** (the 2.x releases required 8.1; support
+for 8.1 was dropped in 3.0.0). Update your environment and your
 `composer.json` constraints accordingly.
 
 ## `resolve()` returns a `Route`
