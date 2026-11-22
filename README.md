@@ -167,7 +167,7 @@ Full, example-driven documentation lives in [`docs/`](./docs/README.md):
 ```bash
 composer test            # PHPUnit
 composer phpstan         # static analysis (level max)
-composer cs:check        # coding standards (PSR-12)
+composer cs:check        # coding standards (PER-CS)
 composer coverage:check  # line coverage with an enforced floor
 ```
 
