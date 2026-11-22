@@ -41,7 +41,7 @@ final class HealthEndpointsTest extends TestCase
         self::assertSame(200, $response->getStatusCode());
         self::assertSame(
             'application/json; charset=utf-8',
-            $response->getHeaderLine('Content-Type')
+            $response->getHeaderLine('Content-Type'),
         );
         $body = json_decode((string) $response->getBody(), true);
         self::assertSame('ok', $body['status']);
@@ -50,8 +50,8 @@ final class HealthEndpointsTest extends TestCase
     public function testReadinessReturns200WhenAllChecksPass(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db-ping', static fn (): bool => true);
-        $registry->register('cache-ping', static fn (): CheckResult => CheckResult::ok('cache-ping', 'pong'));
+        $registry->register('db-ping', static fn(): bool => true);
+        $registry->register('cache-ping', static fn(): CheckResult => CheckResult::ok('cache-ping', 'pong'));
 
         $endpoints = new HealthEndpoints($registry);
         $router = $this->router('http://localhost/readyz');
@@ -70,8 +70,8 @@ final class HealthEndpointsTest extends TestCase
     public function testReadinessReturns503WhenAnyCheckFails(): void
     {
         $registry = new HealthRegistry();
-        $registry->register('db-ping', static fn (): bool => true);
-        $registry->register('cache-ping', static fn (): CheckResult => CheckResult::fail('cache-ping', 'connection refused'));
+        $registry->register('db-ping', static fn(): bool => true);
+        $registry->register('cache-ping', static fn(): CheckResult => CheckResult::fail('cache-ping', 'connection refused'));
 
         $endpoints = new HealthEndpoints($registry);
         $router = $this->router('http://localhost/readyz');
@@ -151,11 +151,11 @@ final class HealthEndpointsTest extends TestCase
         $routes = $router->getRoutes('GET');
         self::assertSame(
             HealthEndpoints::KIND_LIVENESS,
-            $routes['http://localhost/healthz']['options'][HealthEndpoints::OPTION_KEY]
+            $routes['http://localhost/healthz']['options'][HealthEndpoints::OPTION_KEY],
         );
         self::assertSame(
             HealthEndpoints::KIND_READINESS,
-            $routes['http://localhost/readyz']['options'][HealthEndpoints::OPTION_KEY]
+            $routes['http://localhost/readyz']['options'][HealthEndpoints::OPTION_KEY],
         );
     }
 }

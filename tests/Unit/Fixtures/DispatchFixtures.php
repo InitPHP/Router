@@ -74,9 +74,7 @@ final class GreetingService
 
 final class ServiceController
 {
-    public function __construct(private GreetingService $service)
-    {
-    }
+    public function __construct(private GreetingService $service) {}
 
     public function index(): string
     {

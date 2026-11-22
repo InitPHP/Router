@@ -148,19 +148,19 @@ class Router
         $this->matcher = new RouteMatcher($this->collection, $this->patternRegistry, $this->fileLinkHandler);
         $this->controllerResolver = new ControllerResolver(
             \is_string($this->configs['namespaces']['controller'] ?? null) ? $this->configs['namespaces']['controller'] : null,
-            \is_string($this->configs['paths']['controller'] ?? null) ? $this->configs['paths']['controller'] : null
+            \is_string($this->configs['paths']['controller'] ?? null) ? $this->configs['paths']['controller'] : null,
         );
         $this->parameterResolver = new ParameterResolver(
             $this->request,
             $this->argumentNewInstance,
-            $this->container
+            $this->container,
         );
         $this->middlewareRunner = new MiddlewareRunner($this->request, $this->parameterResolver);
         $this->dispatcher = new Dispatcher(
             $this->controllerResolver,
             $this->parameterResolver,
             $this->middlewareRunner,
-            $this->fileLinkHandler
+            $this->fileLinkHandler,
         );
         $this->uri = new Uri($this->request->getUri()->__toString());
 
@@ -168,7 +168,7 @@ class Router
         $context = new RequestContext(
             $this->request,
             (bool) $this->configs['variable_method'],
-            self::SUPPORTED_METHODS
+            self::SUPPORTED_METHODS,
         );
         $this->currentMethod = $context->getMethod();
         $this->currentIp = $context->getClientIp();
@@ -301,7 +301,7 @@ class Router
         $path = (isset($options['base_path']) && $options['base_path'] != '/' ? \rtrim($options['base_path'], '/') . '/' : '')
             . ($options['prefix'] ?? '')
             . $path;
-        $path = (string)\preg_replace('#/{2,}#', '/', $path);
+        $path = (string) \preg_replace('#/{2,}#', '/', $path);
 
         $uri = clone $this->uri;
         $uri->withPath($path);
@@ -608,7 +608,7 @@ class Router
             ->register(['GET'], ('/' . $prefix . '/{' . $prefix . '}'), ($controller . '::show'), ['name' => ($name_prefix . '.show')])
             ->register(['GET'], ('/' . $prefix . '/{' . $prefix . '}/edit'), ($controller . '::edit'), ['name' => ($name_prefix . '.edit')])
             ->register(['PUT', 'PATCH'], ('/' . $prefix . '/{' . $prefix . '}'), ($controller . '::update'), ['name' => ($name_prefix . '.update')])
-            ->register(['DELETE'], ('/' . $prefix . '/{'.$prefix.'}'), ($controller . '::destroy'), ['name' => ($name_prefix . '.destroy')]);
+            ->register(['DELETE'], ('/' . $prefix . '/{' . $prefix . '}'), ($controller . '::destroy'), ['name' => ($name_prefix . '.destroy')]);
     }
 
     /**
@@ -663,12 +663,12 @@ class Router
                 if (\is_object($value) && \method_exists($value, '__toString')) {
                     $value = $value->__toString();
                 } else {
-                    $value = (string)$value;
+                    $value = (string) $value;
                 }
-                $replace['{'.$key.'}'] = $value;
-                $replace[':'.$key] = $value;
-                $replace['{'.$key.'}?'] = $value;
-                $replace[':'.$key.'?'] = $value;
+                $replace['{' . $key . '}'] = $value;
+                $replace[':' . $key] = $value;
+                $replace['{' . $key . '}?'] = $value;
+                $replace[':' . $key . '?'] = $value;
             }
             $url = \strtr($path, $replace);
         } else {
@@ -836,7 +836,7 @@ class Router
         if (\is_array($methods)) {
             foreach ($methods as $method) {
                 if (!\in_array($method, self::SUPPORTED_METHODS)) {
-                    throw new InvalidArgumentException('The "' . (string)$method . '" method is not supported. Supported methods are: ' . \implode(', ', self::SUPPORTED_METHODS));
+                    throw new InvalidArgumentException('The "' . (string) $method . '" method is not supported. Supported methods are: ' . \implode(', ', self::SUPPORTED_METHODS));
                 }
             }
             return $methods;

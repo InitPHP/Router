@@ -38,7 +38,7 @@ final class RouteTest extends TestCase
 
         $this->assertSame(
             ['before' => ['B1'], 'after' => ['A1'], 0 => 'M1'],
-            $route->getOptions()['middleware']
+            $route->getOptions()['middleware'],
         );
     }
 

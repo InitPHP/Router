@@ -47,7 +47,7 @@ final class LinkResolveStateRegressionTest extends RegressionTestCase
         $this->assertInstanceOf(
             ResponseInterface::class,
             $response,
-            'A5: resolving a link route before dispatch() must not corrupt the dispatch state.'
+            'A5: resolving a link route before dispatch() must not corrupt the dispatch state.',
         );
         $this->assertStringContainsString('FILE-LINK-OK', (string) $response->getBody());
     }

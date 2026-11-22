@@ -23,7 +23,7 @@ abstract class RegressionTestCase extends TestCase
     protected function makeRouter(
         string $url = 'http://localhost/',
         string $method = 'GET',
-        array $configs = []
+        array $configs = [],
     ): Router {
         $request = new Request($method, $url, [], null, '1.1');
         $response = new Response(200, [], new Stream('', null), '1.1');

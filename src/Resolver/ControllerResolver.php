@@ -25,9 +25,8 @@ final class ControllerResolver
 {
     public function __construct(
         private ?string $namespace = null,
-        private ?string $path = null
-    ) {
-    }
+        private ?string $path = null,
+    ) {}
 
     /**
      * Splits a non-closure handler into its controller and method parts.

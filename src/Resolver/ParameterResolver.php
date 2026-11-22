@@ -34,9 +34,8 @@ final class ParameterResolver
     public function __construct(
         private RequestInterface $request,
         private bool $argumentNewInstance = false,
-        private ?ContainerInterface $container = null
-    ) {
-    }
+        private ?ContainerInterface $container = null,
+    ) {}
 
     /**
      * Resolves the arguments for a function or method.
@@ -145,7 +144,7 @@ final class ParameterResolver
             throw new RouterException(\sprintf(
                 'Unable to resolve parameter "%s" of class "%s".',
                 $parameter->getName(),
-                $class->getName()
+                $class->getName(),
             ));
         }
 

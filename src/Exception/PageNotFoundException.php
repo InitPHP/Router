@@ -19,6 +19,4 @@ namespace InitPHP\Router\Exception;
  * Thrown by dispatch() when no route matches the request and no 404 handler
  * has been defined.
  */
-class PageNotFoundException extends RouterException
-{
-}
+class PageNotFoundException extends RouterException {}

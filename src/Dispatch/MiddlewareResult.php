@@ -25,7 +25,6 @@ final class MiddlewareResult
 {
     public function __construct(
         public readonly ResponseInterface $response,
-        public readonly bool $halted
-    ) {
-    }
+        public readonly bool $halted,
+    ) {}
 }

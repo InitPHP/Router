@@ -45,7 +45,7 @@ final class Route
         private string $path,
         $handler,
         array $options = [],
-        array $arguments = []
+        array $arguments = [],
     ) {
         $this->methods = \array_values($methods);
         $this->handler = $handler;
@@ -160,7 +160,7 @@ final class Route
             \is_array($data['methods'] ?? null) ? $data['methods'] : [],
             (string) ($data['path'] ?? ''),
             $data['execute'] ?? null,
-            \is_array($data['options'] ?? null) ? $data['options'] : []
+            \is_array($data['options'] ?? null) ? $data['options'] : [],
         );
     }
 }

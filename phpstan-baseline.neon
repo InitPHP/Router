@@ -79,12 +79,6 @@ parameters:
 			path: src/Dispatch/MiddlewareRunner.php
 
 		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
-			path: src/Dispatch/MiddlewareRunner.php
-
-		-
 			message: '#^Method InitPHP\\Router\\Dispatch\\MiddlewareRunner\:\:controllerMiddlewares\(\) should return array\<int, mixed\> but returns array\<mixed\>\.$#'
 			identifier: return.type
 			count: 1
@@ -154,12 +148,6 @@ parameters:
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 2
-			path: src/Resolver/ControllerResolver.php
-
-		-
-			message: '#^If condition is always false\.$#'
-			identifier: if.alwaysFalse
-			count: 1
 			path: src/Resolver/ControllerResolver.php
 
 		-

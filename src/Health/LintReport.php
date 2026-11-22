@@ -28,9 +28,7 @@ final class LintReport
     /**
      * @param list<LintFinding> $findings
      */
-    public function __construct(public readonly array $findings)
-    {
-    }
+    public function __construct(public readonly array $findings) {}
 
     /**
      * Whether the readiness gate passes: true when no ERROR-severity finding is
@@ -64,7 +62,7 @@ final class LintReport
     {
         return \array_values(\array_filter(
             $this->findings,
-            static fn (LintFinding $f): bool => $f->severity === LintSeverity::ERROR
+            static fn(LintFinding $f): bool => $f->severity === LintSeverity::ERROR,
         ));
     }
 
@@ -86,8 +84,8 @@ final class LintReport
         return [
             'passes'   => $this->passes(),
             'findings' => \array_map(
-                static fn (LintFinding $f): array => $f->toArray(),
-                $this->findings
+                static fn(LintFinding $f): array => $f->toArray(),
+                $this->findings,
             ),
         ];
     }

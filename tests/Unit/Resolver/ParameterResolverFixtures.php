@@ -11,21 +11,15 @@ final class PlainService
 
 final class DependentService
 {
-    public function __construct(public PlainService $dependency)
-    {
-    }
+    public function __construct(public PlainService $dependency) {}
 }
 
 final class NullableScalarDependency
 {
-    public function __construct(public ?string $name)
-    {
-    }
+    public function __construct(public ?string $name) {}
 }
 
 final class RequiredScalarDependency
 {
-    public function __construct(public string $name)
-    {
-    }
+    public function __construct(public string $name) {}
 }

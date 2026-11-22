@@ -28,7 +28,7 @@ final class DispatchTest extends \PHPUnit\Framework\TestCase
     public function testCallableReturningStringIsWrittenToBody(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): string => 'Hello World');
+        $router->get('/', static fn(): string => 'Hello World');
 
         $response = $router->dispatch();
 
@@ -39,7 +39,7 @@ final class DispatchTest extends \PHPUnit\Framework\TestCase
     public function testCallableReturningResponseReplacesTheResponse(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (ResponseInterface $response): ResponseInterface => $response->withStatus(201));
+        $router->get('/', static fn(ResponseInterface $response): ResponseInterface => $response->withStatus(201));
 
         $this->assertSame(201, $router->dispatch()->getStatusCode());
     }
@@ -47,7 +47,7 @@ final class DispatchTest extends \PHPUnit\Framework\TestCase
     public function testCallableReturningStreamBecomesTheBody(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (): StreamInterface => new Stream('stream-body', null));
+        $router->get('/', static fn(): StreamInterface => new Stream('stream-body', null));
 
         $this->assertSame('stream-body', (string) $router->dispatch()->getBody());
     }
@@ -83,10 +83,10 @@ final class DispatchTest extends \PHPUnit\Framework\TestCase
     public function testHandlerReceivesTheMiddlewareModifiedResponse(): void
     {
         $router = $this->router();
-        $router->get('/', static fn (ResponseInterface $response): ResponseInterface => $response)
+        $router->get('/', static fn(ResponseInterface $response): ResponseInterface => $response)
             ->filter(
-                static fn ($req, ResponseInterface $res, $args): ResponseInterface => $res->withHeader('X-Mw', 'on'),
-                Router::BEFORE
+                static fn($req, ResponseInterface $res, $args): ResponseInterface => $res->withHeader('X-Mw', 'on'),
+                Router::BEFORE,
             );
 
         $this->assertSame('on', $router->dispatch()->getHeaderLine('X-Mw'));
@@ -95,8 +95,8 @@ final class DispatchTest extends \PHPUnit\Framework\TestCase
     public function testNotFoundHandlerIsInvokedWithStatus404(): void
     {
         $router = $this->router('http://localhost/missing');
-        $router->get('/', static fn (): string => 'home');
-        $router->setNotFoundHandler(static fn (): string => 'not-found-page');
+        $router->get('/', static fn(): string => 'home');
+        $router->setNotFoundHandler(static fn(): string => 'not-found-page');
 
         $response = $router->dispatch();
 

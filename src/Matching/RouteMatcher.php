@@ -32,9 +32,8 @@ final class RouteMatcher
     public function __construct(
         private RouteCollection $routes,
         private PatternRegistry $patterns,
-        private FileLinkHandler $links
-    ) {
-    }
+        private FileLinkHandler $links,
+    ) {}
 
     public function match(string $method, string $url, ?string $clientIp): ?Route
     {

@@ -61,7 +61,7 @@ final class RouteMatcherTest extends TestCase
     public function testIpAllowListIsEnforced(): void
     {
         $collection = $this->collectionWith(
-            new Route(1, ['GET'], 'http://localhost/secret', 'h', ['ip' => ['10.0.0.1']])
+            new Route(1, ['GET'], 'http://localhost/secret', 'h', ['ip' => ['10.0.0.1']]),
         );
 
         $this->assertNotNull($this->matcher($collection)->match('GET', 'http://localhost/secret', '10.0.0.1'));
@@ -75,7 +75,7 @@ final class RouteMatcherTest extends TestCase
         // arguments outranks a static one. (Characterising existing behaviour.)
         $collection = $this->collectionWith(
             new Route(1, ['GET'], 'http://localhost/{any}', 'dynamic'),
-            new Route(2, ['GET'], 'http://localhost/contact', 'static')
+            new Route(2, ['GET'], 'http://localhost/contact', 'static'),
         );
 
         $matched = $this->matcher($collection)->match('GET', 'http://localhost/contact', null);
