@@ -67,11 +67,11 @@ location / {
 <?php
 require_once 'vendor/autoload.php';
 
-use InitPHP\HTTP\Message\{Request, Response};
+use InitPHP\HTTP\Message\{ServerRequest, Response};
 use InitPHP\HTTP\Emitter\Emitter;
 use InitPHP\Router\Router;
 
-$request  = Request::createFromGlobals();
+$request  = ServerRequest::createFromGlobals();
 $response = new Response();
 
 $router = new Router($request, $response);
@@ -80,7 +80,7 @@ $router->get('/', function () {
     return 'Hello World!';
 });
 
-$router->post('/login', function (Request $request, Response $response) {
+$router->post('/login', function (ServerRequest $request, Response $response) {
     return $response->withStatus(401);
 });
 

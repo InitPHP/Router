@@ -10,12 +10,12 @@ returns the response to emit.
 <?php
 require_once 'vendor/autoload.php';
 
-use InitPHP\HTTP\Message\{Request, Response};
+use InitPHP\HTTP\Message\{ServerRequest, Response};
 use InitPHP\HTTP\Emitter\Emitter;
 use InitPHP\Router\Router;
 
 // 1. Build the request and a blank response.
-$request  = Request::createFromGlobals();
+$request  = ServerRequest::createFromGlobals();
 $response = new Response();
 
 // 2. Create the router.
@@ -26,7 +26,7 @@ $router->get('/', function () {
     return 'Hello World!';
 });
 
-$router->post('/login', function (Request $request, Response $response) {
+$router->post('/login', function (ServerRequest $request, Response $response) {
     return $response->withStatus(401);
 });
 
@@ -70,7 +70,7 @@ request/response (or a service), and the rest are filled from the captured path
 values:
 
 ```php
-$router->get('/users/{id}', function (Request $request, $id) {
+$router->get('/users/{id}', function (ServerRequest $request, $id) {
     return 'User ' . $id;
 });
 ```

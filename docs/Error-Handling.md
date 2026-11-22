@@ -10,7 +10,7 @@ handler is a closure or controller reference, just like a route handler, and the
 response is returned with status **404**:
 
 ```php
-$router->setNotFoundHandler(function (Request $request, Response $response) {
+$router->setNotFoundHandler(function (ServerRequest $request, Response $response) {
     $response->getBody()->write('Not Found');
     return $response; // dispatch() returns this with a 404 status
 });

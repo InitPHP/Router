@@ -17,7 +17,7 @@ If a required built-in parameter cannot be filled, a
 [`RouterException`](Exceptions.md) is thrown.
 
 ```php
-$router->get('/users/{id}', function (Request $request, Response $response, $id) {
+$router->get('/users/{id}', function (ServerRequest $request, Response $response, $id) {
     // $request, $response -> shared instances; $id -> captured value
     return $response->withHeader('X-User', (string) $id);
 });

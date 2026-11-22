@@ -22,7 +22,7 @@ method arguments:
 ```php
 class PostController
 {
-    public function show(Request $request, $id)
+    public function show(ServerRequest $request, $id)
     {
         return 'Post ' . $id;
     }

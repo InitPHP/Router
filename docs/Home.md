@@ -11,11 +11,11 @@ composer require initphp/router
 ```
 
 ```php
-use InitPHP\HTTP\Message\{Request, Response};
+use InitPHP\HTTP\Message\{ServerRequest, Response};
 use InitPHP\HTTP\Emitter\Emitter;
 use InitPHP\Router\Router;
 
-$router = new Router(Request::createFromGlobals(), new Response());
+$router = new Router(ServerRequest::createFromGlobals(), new Response());
 
 $router->get('/', fn () => 'Hello World!');
 $router->get('/posts/{id}', fn ($id) => 'Post #' . $id);
