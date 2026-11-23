@@ -88,8 +88,8 @@ its registered name:
 appears only when the check supplied one.
 
 > The response is built through the PSR-7 interfaces only. If the response body
-> stream is not writable, the status and headers are still set but the body stays
-> empty.
+> stream is not writable, the status and headers are still set and the body is left
+> untouched, so it is not written to.
 
 ### Route tags
 
@@ -125,7 +125,15 @@ A check is a callable with the signature `callable(): bool|CheckResult`:
   reported under the **registered name**, whatever name the `CheckResult` itself
   carries.
 - Throwing is recorded as a failure with the exception message as the `detail`.
-  A misbehaving dependency probe never takes the endpoint down.
+  A check that throws does not abort the run; the other checks still execute.
+
+> **`detail` is sent to whoever can reach the endpoint.** The readiness route is
+> registered without authentication, and an exception message is copied into the
+> response as is. A database driver error can contain a user name, host or
+> address. Catch exceptions inside the check and return
+> `CheckResult::fail($name, 'database unreachable')` or another generic text, and
+> consider limiting the route to your internal network, for example with a
+> [group by client IP](Route-Groups.md) or at the proxy.
 
 A registry with no checks is healthy, so the readiness route would always report
 `200`. The [Readiness Linter](Readiness-Linter.md) can flag this.

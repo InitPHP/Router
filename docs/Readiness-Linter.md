@@ -47,7 +47,11 @@ A probe counts as present when a registered route either
 | Readiness | `/readyz`, `/ready`, `/readiness` |
 
 The path match is a suffix match, so it works whatever scheme, host or prefix
-the route was registered under.
+the route was registered under. It does not look at the HTTP method either: any
+route whose path ends with one of these, for example `POST /orders/{id}/ready`,
+counts as a readiness endpoint and can make the gate pass when no real probe
+exists. Tag your probes with `HealthEndpoints`, and avoid these endings on
+unrelated routes.
 
 The linter reads routes through `Router::getRoutes()`. Call it after your routes
 are registered.
