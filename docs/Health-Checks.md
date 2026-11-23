@@ -132,8 +132,10 @@ A check is a callable with the signature `callable(): bool|CheckResult`:
 > response as is. A database driver error can contain a user name, host or
 > address. Catch exceptions inside the check and return
 > `CheckResult::fail($name, 'database unreachable')` or another generic text, and
-> consider limiting the route to your internal network, for example with a
-> [group by client IP](Route-Groups.md) or at the proxy.
+> limit the route to your internal network at the proxy or firewall, or behind
+> authentication. A [group by client IP](Route-Groups.md#client-ip-groups--ip) is
+> not enough: the router reads the address from request headers a client can
+> forge.
 
 A registry with no checks is healthy, so the readiness route would always report
 `200`. The [Readiness Linter](Readiness-Linter.md) can flag this.

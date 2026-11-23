@@ -59,6 +59,25 @@ $router->put('/articles/{id}', 'ArticleController@update');
 
 The override is only honoured when the value is one of the supported methods.
 
+> **Warning: the override also applies to `GET` requests.** The router reads
+> `_method` from `$_REQUEST` (query string and body) and does not require the
+> real request method to be `POST`. With this option on, a link such as
+> `https://example.com/articles/42?_method=DELETE` is routed as `DELETE`, and a
+> logged-in user who follows it (a top-level navigation sends `SameSite=Lax`
+> cookies) triggers the handler. Protect every state-changing route with a CSRF
+> token, validated in the handler or in a middleware, and put the token in the
+> form:
+>
+> ```html
+> <form method="post" action="/articles/42">
+>     <input type="hidden" name="_method" value="DELETE">
+>     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+> </form>
+> ```
+>
+> Leave `variable_method` off (the default) for JSON APIs and any app that does
+> not submit HTML forms.
+
 ### `argument_new_instance`
 
 By default, a handler parameter type-hinted with your request/response class
