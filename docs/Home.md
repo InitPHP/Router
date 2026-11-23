@@ -40,6 +40,8 @@ $router->get('/posts/{id}', fn ($id) => 'Post #' . $id);
 | Serve files and directories | [Static File Links](Static-File-Links.md) |
 | Custom 404 handling and the exception hierarchy | [Error Handling](Error-Handling.md) · [Exceptions](Exceptions.md) |
 | Cache the compiled route table | [Caching](Caching.md) |
+| Liveness and readiness probe endpoints | [Health Checks](Health-Checks.md) |
+| CI gate for the probe endpoints | [Readiness Linter](Readiness-Linter.md) |
 
 ## Requirements
 

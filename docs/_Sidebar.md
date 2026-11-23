@@ -18,6 +18,8 @@
 - [Static File Links](Static-File-Links.md)
 - [Error Handling](Error-Handling.md)
 - [Caching](Caching.md)
+- [Health Checks](Health-Checks.md)
+- [Readiness Linter](Readiness-Linter.md)
 
 **Reference**
 - [API Reference](API-Reference.md)

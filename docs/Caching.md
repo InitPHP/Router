@@ -44,7 +44,8 @@ $response = $router->dispatch();
 
 - **Handlers must be cacheable.** String (`'Controller@method'`) and array
   handlers cache fine. **Closures cannot be serialized**, so don't enable caching
-  if your routes use closure handlers.
+  if your routes use closure handlers. This includes the probe routes from
+  [Health Checks](Health-Checks.md), which are registered with closures.
 - Delete the cache file (or wait for the TTL) after changing your routes.
 - A write failure is reported as a warning and never interrupts the response.
 - The cache is read with `allowed_classes: false`, so it never instantiates
