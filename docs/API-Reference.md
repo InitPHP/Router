@@ -10,6 +10,8 @@ Namespace: `InitPHP\Router` (exceptions under `InitPHP\Router\Exception`).
 | [`Router`](#router) | class | The router: register routes and dispatch requests. |
 | [`Route`](#route) | final class | A matched route, returned by `resolve()`. |
 | [`Middleware`](#middleware) | abstract class | Base class for class-based middleware. |
+| [`HealthEndpoints`, `HealthRegistry`, `HealthReport`, `CheckResult`](Health-Checks.md) | final classes (`InitPHP\Router\Health`) | Liveness and readiness endpoints. |
+| [`ReadinessLinter`, `LintReport`, `LintFinding`, `LintSeverity`](Readiness-Linter.md) | final classes and enum (`InitPHP\Router\Health`) | CI gate for the probe endpoints. |
 | [`RouterException`](Exceptions.md) | class | Router runtime errors. |
 | [`PageNotFoundException`](Exceptions.md) | class | No route matched and no 404 handler. |
 | [`InvalidArgumentException`](Exceptions.md) | class | Invalid argument type/value. |

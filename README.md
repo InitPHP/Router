@@ -151,6 +151,9 @@ advisory) and a human-readable `message`. Endpoints added via `HealthEndpoints`
 are recognised by their route tag; hand-rolled conventional paths
 (`/healthz`, `/readyz`, …) are recognised too.
 
+Full reference: [Health Checks](./docs/Health-Checks.md) and
+[Readiness Linter](./docs/Readiness-Linter.md).
+
 ## Documentation
 
 Full, example-driven documentation lives in [`docs/`](./docs/Home.md):
@@ -160,6 +163,7 @@ Full, example-driven documentation lives in [`docs/`](./docs/Home.md):
 - [Controllers](./docs/Controllers.md) · [Dependency injection](./docs/Dependency-Injection.md) · [Middleware](./docs/Middleware.md)
 - [Named routes & URLs](./docs/Named-Routes-and-URLs.md) · [Static file links](./docs/Static-File-Links.md)
 - [Error handling](./docs/Error-Handling.md) · [Caching](./docs/Caching.md)
+- [Health checks](./docs/Health-Checks.md) · [Readiness linter](./docs/Readiness-Linter.md)
 - [Upgrading from 1.x to 2.0](./docs/Upgrading-from-1.x-to-2.0.md)
 
 ## Testing
