@@ -47,15 +47,31 @@ $router->domain('{slug}.example.com', function (Router $route) {
 
 A request to `https://acme.example.com/` matches and captures `acme`.
 
+> **Warning: `domain()` is a routing selector, not an access control.** The
+> router reads the host from the request's `Host` header, which the client
+> chooses (unless your web server or proxy only serves known host names and
+> rewrites the rest). A request that sends `Host: internal.example.com` is
+> routed as that host. Do not use a domain group to keep a route private.
+
 ## Port groups — `port()`
 
-Restrict routes to a specific port:
+Match routes by the port of the request URL:
 
 ```php
-$router->port(9000, function (Router $route) {
-    $route->get('/metrics', 'MetricsController@index');
+// A second entry point that only exists on port 8443 (for example a separate
+// listener for a mobile client). Any caller can reach it by asking for that port.
+$router->port(8443, function (Router $route) {
+    $route->get('/mobile/ping', 'MobileController@ping');
 });
 ```
+
+> **Warning: `port()` is not an access control.** The port comes from the
+> `Host` header (`Host: example.com:8443`), which the client chooses, not from
+> the port the connection arrived on. A request that sends that header is routed
+> to the group even if your server never listens on that port. Do not put
+> `/metrics`, `/admin` or other private routes behind `port()`, `domain()` or
+> `ip()`: protect them with authentication middleware or at the network edge
+> (separate listener, firewall, reverse proxy rules).
 
 ## Client-IP groups — `ip()`
 

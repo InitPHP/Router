@@ -16,7 +16,7 @@ request/response implementation.
 - Controller handlers (`Home@about`, `Home::about`, `Home->about`, or `[Home::class, 'about']`).
 - Before/after middleware (filters), per route and per controller.
 - Static and dynamic route patterns, with a customizable pattern registry.
-- Route grouping by prefix, domain, port and client IP (the client IP comes from request headers a client can forge — not an access control; see [Route Groups](docs/Route-Groups.md#client-ip-groups--ip)).
+- Route grouping by prefix, domain, port and client IP (`ip()`, `port()` and `domain()` read request headers a client can forge, so they are routing selectors, not access controls; see [Route Groups](docs/Route-Groups.md#client-ip-groups--ip)).
 - Named routes and URL generation.
 - Reflection-based dependency injection for handlers, with optional [PSR-11](https://www.php-fig.org/psr/psr-11/) container support.
 - Customizable 404 handling.
