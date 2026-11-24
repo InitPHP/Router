@@ -111,8 +111,11 @@ final class HealthEndpoints
             $path,
             function (ResponseInterface $response): ResponseInterface {
                 $report = $this->registry->run();
+                $payload = $report->toArray();
+                // Always a JSON object: an empty list or names such as "0", "1" would encode as `[]`.
+                $payload['checks'] = (object) $payload['checks'];
 
-                return $this->json($response, $report->statusCode(), $report->toArray());
+                return $this->json($response, $report->statusCode(), $payload);
             },
             [self::OPTION_KEY => self::KIND_READINESS],
         );
@@ -139,7 +142,11 @@ final class HealthEndpoints
             if ($body->isSeekable()) {
                 $body->rewind();
             }
-            $body->write((string) \json_encode($payload, \JSON_UNESCAPED_SLASHES));
+            // A check detail may carry invalid UTF-8 (an exception message in a legacy
+            // encoding, say): substitute it rather than let the encoder fail and
+            // leave an empty body behind the status code.
+            $json = \json_encode($payload, \JSON_UNESCAPED_SLASHES | \JSON_INVALID_UTF8_SUBSTITUTE);
+            $body->write($json === false ? '{"status":"fail","checks":{}}' : $json);
         }
 
         return $response;

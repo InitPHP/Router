@@ -70,13 +70,13 @@ final class RouterIntegrationTest extends \PHPUnit\Framework\TestCase
 
     public function testVariableMethodOverridesTheHttpMethod(): void
     {
-        $_REQUEST['_method'] = 'PUT';
+        $_POST['_method'] = 'PUT';
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         $router = $this->router('http://localhost/resource', 'POST', ['variable_method' => true]);
         $router->put('/resource', static fn(): string => 'put-handler');
 
         $body = (string) $router->dispatch()->getBody();
-        unset($_REQUEST['_method']);
+        unset($_POST['_method']);
 
         $this->assertSame('put-handler', $body);
     }

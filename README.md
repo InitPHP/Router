@@ -12,11 +12,11 @@ request/response implementation.
 ## Features
 
 - GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD and ANY methods (plus virtual `LINK` routes).
-- Optional Laravel-style method override via `$_REQUEST['_method']` (also applies to `GET`; protect state-changing routes with a CSRF token — see [Configuration](docs/Configuration.md#variable_method)).
+- Optional Laravel-style method override via the `_method` field of a `POST` body (never the query string; protect state-changing routes with a CSRF token — see [Configuration](docs/Configuration.md#variable_method)).
 - Controller handlers (`Home@about`, `Home::about`, `Home->about`, or `[Home::class, 'about']`).
 - Before/after middleware (filters), per route and per controller.
 - Static and dynamic route patterns, with a customizable pattern registry.
-- Route grouping by prefix, domain, port and client IP (`ip()`, `port()` and `domain()` read request headers a client can forge, so they are routing selectors, not access controls; see [Route Groups](docs/Route-Groups.md#client-ip-groups--ip)).
+- Route grouping by prefix, domain, port and client IP (`ip()` uses `REMOTE_ADDR`, and `X-Forwarded-For` only behind your [`trusted_proxies`](docs/Configuration.md#trusted_proxies); `port()` and `domain()` read the `Host` header a client chooses. They are routing selectors, not access controls; see [Route Groups](docs/Route-Groups.md#client-ip-groups--ip)).
 - Named routes and URL generation.
 - Reflection-based dependency injection for handlers, with optional [PSR-11](https://www.php-fig.org/psr/psr-11/) container support.
 - Customizable 404 handling.

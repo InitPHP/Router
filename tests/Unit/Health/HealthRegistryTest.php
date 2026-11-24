@@ -105,4 +105,17 @@ final class HealthRegistryTest extends TestCase
         self::assertSame(['status' => 'ok'], $array['checks']['db']);
         self::assertSame(['status' => 'fail', 'detail' => 'timeout'], $array['checks']['cache']);
     }
+
+    public function testNumericCheckNamesAreSupported(): void
+    {
+        $registry = new HealthRegistry();
+        $registry->register('1', static fn(): bool => true)
+            ->register('42', static fn(): bool => false);
+
+        $report = $registry->run();
+
+        self::assertFalse($report->healthy);
+        self::assertSame(['1', '42'], $registry->names());
+        self::assertSame(['1', '42'], \array_map(static fn($r): string => $r->name, $report->results));
+    }
 }

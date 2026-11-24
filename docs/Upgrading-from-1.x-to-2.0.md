@@ -103,12 +103,17 @@ $router->setNotFoundHandler($handler);
 ## Client IP detection
 
 The client IP used by `ip()` groups is now read from the **server parameters**
-(`$_SERVER`: `HTTP_CLIENT_IP`, then `HTTP_X_FORWARDED_FOR`, then `REMOTE_ADDR`),
-rather than `getenv()`. The first two are request headers that any client can
-send, and the router does not check them against a trusted proxy list, so the
-detected address is **not trustworthy** unless your edge strips or overwrites
-those headers. Do not use it for access control — see the warning in
-[Route Groups](Route-Groups.md#client-ip-groups--ip).
+(`$_SERVER`), rather than `getenv()`. Releases 2.0 through 3.0.0 read
+`HTTP_CLIENT_IP`, then `HTTP_X_FORWARDED_FOR`, then `REMOTE_ADDR`, without
+checking that the headers came from a proxy you trust, so the detected address
+could be forged. **After 3.0.0** the address is `REMOTE_ADDR`; `X-Forwarded-For` is
+read only behind the proxies listed in the
+[`trusted_proxies`](Configuration.md#trusted_proxies) option, and `Client-IP` is
+never read. If your app sits behind a reverse proxy or load balancer, set
+`trusted_proxies`, otherwise `ip()` groups see the proxy's address. **If that
+address is in an `ip()` list (a proxy on the same machine, `ip('127.0.0.1', ...)`),
+the group is open to every visitor until you set it.** See the
+warning in [Route Groups](Route-Groups.md#client-ip-groups--ip).
 
 ## PSR-11 container
 

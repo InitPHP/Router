@@ -5,6 +5,63 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `trusted_proxies` Router option (IP addresses and CIDR ranges).
+- `RequestContext::normalizeIp()`: the canonical text form of an IP address
+  (IPv4-mapped IPv6 collapsed to IPv4, IPv6 lower-case and shortened), used to
+  compare client addresses with `ip()` allow-list entries.
+
+### Changed (breaking)
+
+- **The client IP is `REMOTE_ADDR` by default.** `ip()` groups no longer trust
+  the `Client-IP` and `X-Forwarded-For` headers, which any client can send. The
+  `Client-IP` header is never read. `X-Forwarded-For` is read only when
+  `REMOTE_ADDR` is listed in the new `trusted_proxies` option (IP addresses and
+  CIDR ranges, IPv4 or IPv6); the chain is then resolved from right to left,
+  skipping trusted proxies. An entry that is not an IP address yields no client
+  address (`null`), and IPv4-mapped IPv6 addresses are treated as IPv4. An invalid
+  `trusted_proxies` entry throws `InvalidArgumentException` on construction.
+- **The `_method` override (`variable_method`) works only on a real `POST`
+  request and only from the POST parameters** (the parsed body of a PSR-7 server
+  request, otherwise `$_POST`). `GET` requests and `_method` in the query string
+  are ignored; `$_REQUEST` is no longer read.
+- `ip()` allow-list entries and the client address are compared in canonical
+  form (IPv4-mapped IPv6 collapsed to IPv4, IPv6 lower-case and shortened), so
+  `ip('::ffff:192.0.2.10')` now matches the IPv4 client `192.0.2.10`.
+- With a PSR-7 server request, `RequestContext` takes the server parameters from
+  `getServerParams()` (when it returns any), `X-Forwarded-For` from the request's
+  header lines (falling back to `HTTP_X_FORWARDED_FOR`) and `_method` from its
+  parsed body only, instead of `$_SERVER` and `$_POST`.
+- `trusted_proxies` that is not an array throws `InvalidArgumentException`.
+- `RequestContext`: the `$requestParams` constructor argument now means the POST
+  parameters, and a new last argument `$trustedProxies` was added.
+
+#### Upgrading
+
+- Behind a reverse proxy or load balancer, set `trusted_proxies` to its address
+  (not a whole internal network) before upgrading; without it `ip()` groups see
+  the proxy's address. **If that address is in an `ip()` list (for example a
+  proxy on the same machine with `ip('127.0.0.1', ...)`), the group opens to every
+  visitor until you set it.** Have the proxy
+  append the peer it saw to `X-Forwarded-For` and send bare IP addresses (no
+  ports).
+- If a client submitted `_method` with a `GET` request or in the query string,
+  change it to a `POST` with `_method` in the body.
+- `port()` still reads the port from the `Host` header, `domain()` the host
+  name; both remain routing selectors, not access controls (documented).
+
+### Fixed
+
+- `HealthRegistry`: a numeric check name (`'1'`, `'42'`) raised a `TypeError`
+  when the registry ran; `names()` now returns strings.
+- `HealthEndpoints`: a check detail that is not valid UTF-8 produced an empty
+  `503` body. Invalid bytes are now replaced with U+FFFD.
+- `HealthEndpoints`: the readiness body encodes `checks` as a JSON object also
+  when it is empty (`"checks":{}` instead of `"checks":[]`).
+
 ## [3.0.0] - 2026-11-22
 
 ### Changed (breaking)

@@ -158,4 +158,51 @@ final class HealthEndpointsTest extends TestCase
             $routes['http://localhost/readyz']['options'][HealthEndpoints::OPTION_KEY],
         );
     }
+
+    public function testReadinessWithNoChecksEncodesChecksAsAnObject(): void
+    {
+        $router = $this->router('http://localhost/readyz');
+        (new HealthEndpoints(new HealthRegistry()))->register($router);
+
+        $response = $router->dispatch();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('{"status":"ok","checks":{}}', (string) $response->getBody());
+    }
+
+    public function testReadinessWithNumericCheckNamesStillEncodesAnObject(): void
+    {
+        $registry = new HealthRegistry();
+        $registry->register('0', static fn(): bool => true)
+            ->register('1', static fn(): bool => false);
+        $router = $this->router('http://localhost/readyz');
+        (new HealthEndpoints($registry))->register($router);
+
+        $response = $router->dispatch();
+
+        self::assertSame(503, $response->getStatusCode());
+        self::assertSame(
+            '{"status":"fail","checks":{"0":{"status":"ok"},"1":{"status":"fail"}}}',
+            (string) $response->getBody(),
+        );
+    }
+
+    public function testReadinessWithInvalidUtf8DetailKeepsItsBody(): void
+    {
+        $registry = new HealthRegistry();
+        $registry->register('db', static function (): bool {
+            throw new \RuntimeException("connection lost \xC3\x28 caf\xE9");
+        });
+        $router = $this->router('http://localhost/readyz');
+        (new HealthEndpoints($registry))->register($router);
+
+        $response = $router->dispatch();
+
+        self::assertSame(503, $response->getStatusCode());
+        $body = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($body);
+        self::assertSame('fail', $body['status']);
+        self::assertSame('fail', $body['checks']['db']['status']);
+        self::assertStringContainsString('connection lost', $body['checks']['db']['detail']);
+    }
 }

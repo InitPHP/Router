@@ -87,6 +87,11 @@ its registered name:
 (Shown formatted for readability; the endpoint emits compact JSON.) `detail`
 appears only when the check supplied one.
 
+`checks` is always a JSON object, also when the registry has no checks
+(`"checks":{}`) or the names are numeric (`"0"`, `"1"`). Text in a `detail` that
+is not valid UTF-8 (an exception message in a legacy encoding) has the invalid
+bytes replaced with U+FFFD instead of dropping the body.
+
 > The response is built through the PSR-7 interfaces only. If the response body
 > stream is not writable, the status and headers are still set and the body is left
 > untouched, so it is not written to.
@@ -134,8 +139,7 @@ A check is a callable with the signature `callable(): bool|CheckResult`:
 > `CheckResult::fail($name, 'database unreachable')` or another generic text, and
 > limit the route to your internal network at the proxy or firewall, or behind
 > authentication. A [group by client IP](Route-Groups.md#client-ip-groups--ip) is
-> not enough: the router reads the address from request headers a client can
-> forge.
+> a routing selector, not an access control, so do not rely on it alone.
 
 A registry with no checks is healthy, so the readiness route would always report
 `200`. The [Readiness Linter](Readiness-Linter.md) can flag this.
