@@ -72,6 +72,7 @@ class Router
         ],
         'base_path'                 => '/',
         'variable_method'           => false,
+        'trusted_proxies'           => [],
         'argument_new_instance'     => false,
     ];
 
@@ -124,8 +125,8 @@ class Router
 
     /**
      * @param array<string, mixed> $configs Router configuration: paths,
-     * namespaces, base_path, variable_method, argument_new_instance, plus the
-     * optional "container" (PSR-11) and "cache" sub-arrays.
+     * namespaces, base_path, variable_method, trusted_proxies,
+     * argument_new_instance, plus the optional "container" (PSR-11) and "cache" sub-arrays.
      */
     public function __construct(RequestInterface $request, ResponseInterface $response, array $configs = [])
     {
@@ -169,6 +170,9 @@ class Router
             $this->request,
             (bool) $this->configs['variable_method'],
             self::SUPPORTED_METHODS,
+            null,
+            null,
+            \is_array($this->configs['trusted_proxies']) ? \array_values($this->configs['trusted_proxies']) : [],
         );
         $this->currentMethod = $context->getMethod();
         $this->currentIp = $context->getClientIp();
@@ -794,7 +798,7 @@ class Router
      * "prefix" and "as" accumulate across levels (so nested groups build up a
      * combined path/name prefix); nested arrays (namespaces, paths) are merged
      * leaf-wise; every other key is overridden by the later source. The
-     * transient "variable_method" key and a redundant "/" base path are dropped.
+     * transient "variable_method" and "trusted_proxies" keys and a redundant "/" base path are dropped.
      *
      * @param array<string, mixed> $base
      * @param array<string, mixed> ...$overrides
@@ -818,7 +822,7 @@ class Router
                 $data[$key] = $value;
             }
         }
-        unset($data['variable_method']);
+        unset($data['variable_method'], $data['trusted_proxies']);
         if (($data['base_path'] ?? null) === '/') {
             unset($data['base_path']);
         }

@@ -87,7 +87,7 @@ final class HealthRegistry
      */
     public function names(): array
     {
-        return \array_keys($this->checks);
+        return \array_map('strval', \array_keys($this->checks));
     }
 
     /**
@@ -100,7 +100,8 @@ final class HealthRegistry
         $results = [];
         $healthy = true;
         foreach ($this->checks as $name => $check) {
-            $result = $this->runOne($name, $check);
+            // PHP turns numeric-string array keys ("1", "42") into integers.
+            $result = $this->runOne((string) $name, $check);
             $results[] = $result;
             if (!$result->ok) {
                 $healthy = false;

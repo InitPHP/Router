@@ -96,16 +96,20 @@ through to a 404 unless another route matches. An invalid IP address throws
 [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#client-ip-detection) for how the
 client IP is detected.
 
-> **Warning: `ip()` is not an access control.** The router takes the client
-> address from the `Client-IP` header first, then the first entry of
-> `X-Forwarded-For`, and only then from `REMOTE_ADDR` (`$_SERVER['HTTP_CLIENT_IP']`,
-> `HTTP_X_FORWARDED_FOR`, `REMOTE_ADDR`). It does not check that those headers
-> came from a proxy you trust, so a client that sends `Client-IP: 127.0.0.1` is
-> routed as `127.0.0.1`. Do not use `ip()` to hide `/debug`, `/internal`,
-> health or admin routes. Protect them with authentication middleware or at the
-> network edge (firewall, reverse proxy), and have the edge remove or overwrite
-> `Client-IP` and `X-Forwarded-For` on inbound requests so the application never
-> sees a client-supplied value.
+The client address is `REMOTE_ADDR`, the address of the TCP peer. `Client-IP` is
+never read. `X-Forwarded-For` is read only when `REMOTE_ADDR` is one of the
+[`trusted_proxies`](Configuration.md#trusted_proxies) you configured, from right
+to left, skipping trusted proxies. Behind a reverse proxy, list the proxy
+there; otherwise every request appears to come from the proxy itself.
+
+> **Warning: `ip()` is still a routing selector, not an access control.** With a
+> correct `trusted_proxies` list a client cannot choose the address, but the
+> guarantee is only as good as that list and your proxy: a range that is too wide
+> (or a proxy that passes `X-Forwarded-For` through without appending the peer it
+> saw) lets a client forge the address again, and an address shared by many users
+> (a NAT, a corporate proxy) identifies all of them. Do not use `ip()` to hide
+> `/debug`, `/internal`, health or admin routes. Protect them with authentication
+> middleware or at the network edge (firewall, reverse proxy).
 
 ## Combining groups
 

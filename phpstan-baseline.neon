@@ -97,19 +97,7 @@ parameters:
 			path: src/Dispatch/MiddlewareRunner.php
 
 		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 4
-			path: src/Http/RequestContext.php
-
-		-
 			message: '#^Parameter \#1 \$serverParams of method InitPHP\\Router\\Http\\RequestContext\:\:detectClientIp\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Http/RequestContext.php
-
-		-
-			message: '#^Parameter \#4 \$requestParams of method InitPHP\\Router\\Http\\RequestContext\:\:detectMethod\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/Http/RequestContext.php

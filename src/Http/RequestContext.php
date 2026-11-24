@@ -15,12 +15,23 @@ declare(strict_types=1);
 
 namespace InitPHP\Router\Http;
 
+use InitPHP\Router\Exception\InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Derives the request facts the router routes on — the (optionally overridden)
  * HTTP method and the client IP address — from the PSR-7 request and the
  * server/request parameter bags.
+ *
+ * Client IP: the address comes from `REMOTE_ADDR`. The `X-Forwarded-For` header
+ * is read only when `REMOTE_ADDR` is one of the configured trusted proxies; the
+ * chain is then resolved from right to left, skipping trusted proxies, and the
+ * first untrusted address is the client. `Client-IP` is never read.
+ *
+ * Method override: `_method` is honoured only when the real method is `POST`,
+ * and only from the POST parameters (the parsed body on a PSR-7 server request,
+ * `$_POST` otherwise) — never from the query string.
  *
  * The parameter bags are injectable so the detection logic is testable without
  * touching superglobals.
@@ -32,9 +43,19 @@ final class RequestContext
     private ?string $clientIp;
 
     /**
+     * @var list<array{0: string, 1: int}> Trusted proxies as packed network address and prefix length in bits.
+     */
+    private array $trustedProxies = [];
+
+    /**
      * @param list<string> $supportedMethods Methods accepted for "_method" override.
      * @param array<string, mixed>|null $serverParams Defaults to $_SERVER.
-     * @param array<string, mixed>|null $requestParams Defaults to $_REQUEST.
+     * @param array<string, mixed>|null $requestParams POST parameters read for the "_method" override.
+     * Defaults to the parsed body of a PSR-7 server request when it is an array, otherwise to $_POST.
+     * @param list<mixed> $trustedProxies IP addresses or CIDR ranges (IPv4 or IPv6) of the proxies
+     * whose X-Forwarded-For header may be trusted, as strings; any other value is rejected.
+     * Empty by default: the header is ignored.
+     * @throws InvalidArgumentException When a trusted proxy entry is not a valid IP address or CIDR range.
      */
     public function __construct(
         RequestInterface $request,
@@ -42,9 +63,17 @@ final class RequestContext
         array $supportedMethods = [],
         ?array $serverParams = null,
         ?array $requestParams = null,
+        array $trustedProxies = [],
     ) {
         $serverParams ??= $_SERVER;
-        $requestParams ??= $_REQUEST;
+        if ($requestParams === null) {
+            $parsedBody = $request instanceof ServerRequestInterface ? $request->getParsedBody() : null;
+            $requestParams = \is_array($parsedBody) ? $parsedBody : $_POST;
+        }
+
+        foreach ($trustedProxies as $proxy) {
+            $this->trustedProxies[] = $this->parseTrustedProxy($proxy);
+        }
 
         $this->method = $this->detectMethod($request, $variableMethod, $supportedMethods, $requestParams);
         $this->clientIp = $this->detectClientIp($serverParams);
@@ -62,7 +91,7 @@ final class RequestContext
 
     /**
      * @param list<string> $supportedMethods
-     * @param array<string, mixed> $requestParams
+     * @param array<array-key, mixed> $requestParams
      */
     private function detectMethod(
         RequestInterface $request,
@@ -71,10 +100,10 @@ final class RequestContext
         array $requestParams,
     ): string {
         $method = \strtoupper($request->getMethod());
-        if (!$variableMethod || !isset($requestParams['_method'])) {
+        if (!$variableMethod || $method !== 'POST' || !isset($requestParams['_method']) || !\is_string($requestParams['_method'])) {
             return $method;
         }
-        $override = \strtoupper((string) $requestParams['_method']);
+        $override = \strtoupper($requestParams['_method']);
 
         return \in_array($override, $supportedMethods, true) ? $override : $method;
     }
@@ -84,18 +113,120 @@ final class RequestContext
      */
     private function detectClientIp(array $serverParams): ?string
     {
-        if (!empty($serverParams['HTTP_CLIENT_IP'])) {
-            return (string) $serverParams['HTTP_CLIENT_IP'];
+        $remote = \is_string($serverParams['REMOTE_ADDR'] ?? null) ? self::toPacked($serverParams['REMOTE_ADDR']) : null;
+        if ($remote === null) {
+            return null;
         }
-        if (!empty($serverParams['HTTP_X_FORWARDED_FOR'])) {
-            $forwarded = (string) $serverParams['HTTP_X_FORWARDED_FOR'];
-            if (\str_contains($forwarded, ',')) {
-                $forwarded = \trim(\explode(',', $forwarded, 2)[0]);
+        $forwarded = $serverParams['HTTP_X_FORWARDED_FOR'] ?? null;
+        if ($this->trustedProxies === [] || !$this->isTrusted($remote) || !\is_string($forwarded) || \trim($forwarded) === '') {
+            return self::toText($remote);
+        }
+
+        // Right to left: every hop we trust vouches for the address to its left;
+        // the first address we do not trust is the client. An entry that is not
+        // an IP address breaks the chain, so no client address is reported.
+        $client = $remote;
+        $chain = \explode(',', $forwarded);
+        for ($i = \count($chain) - 1; $i >= 0; --$i) {
+            $hop = self::toPacked($chain[$i]);
+            if ($hop === null) {
+                return null;
             }
-
-            return $forwarded;
+            $client = $hop;
+            if (!$this->isTrusted($hop)) {
+                break;
+            }
         }
 
-        return isset($serverParams['REMOTE_ADDR']) ? (string) $serverParams['REMOTE_ADDR'] : null;
+        return self::toText($client);
+    }
+
+    private function isTrusted(string $packed): bool
+    {
+        foreach ($this->trustedProxies as [$network, $prefix]) {
+            if (\strlen($network) !== \strlen($packed)) {
+                continue;
+            }
+            $bytes = \intdiv($prefix, 8);
+            if (\substr($network, 0, $bytes) !== \substr($packed, 0, $bytes)) {
+                continue;
+            }
+            $bits = $prefix % 8;
+            if ($bits === 0) {
+                return true;
+            }
+            $mask = (0xFF << (8 - $bits)) & 0xFF;
+            if ((\ord($network[$bytes]) & $mask) === (\ord($packed[$bytes]) & $mask)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{0: string, 1: int}
+     */
+    private function parseTrustedProxy(mixed $proxy): array
+    {
+        $address = \is_string($proxy) ? $proxy : '';
+        $prefix = null;
+        if (\str_contains($address, '/')) {
+            [$address, $length] = \explode('/', $address, 2);
+            if ($length === '' || !\ctype_digit($length) || \strlen($length) > 3) {
+                throw new InvalidArgumentException('Invalid trusted proxy: the CIDR prefix length must be a number.');
+            }
+            $prefix = (int) $length;
+        }
+        $address = \trim($address);
+        $raw = \filter_var($address, \FILTER_VALIDATE_IP) === false ? false : \inet_pton($address);
+        if ($raw === false) {
+            throw new InvalidArgumentException(
+                'Invalid trusted proxy: it must be an IP address or a CIDR range such as "10.0.0.0/8".',
+            );
+        }
+        if ($prefix !== null && self::isMapped($raw)) {
+            // "::ffff:10.0.0.0/104" is the IPv4 range 10.0.0.0/8.
+            $prefix = $prefix >= 96 ? $prefix - 96 : -1;
+        }
+        $packed = self::collapse($raw);
+        $prefix ??= \strlen($packed) * 8;
+        if ($prefix < 0 || $prefix > \strlen($packed) * 8) {
+            throw new InvalidArgumentException('Invalid trusted proxy: the CIDR prefix length is out of range.');
+        }
+
+        return [$packed, $prefix];
+    }
+
+    /**
+     * An IP address as 4 (IPv4) or 16 (IPv6) bytes, with IPv4-mapped IPv6
+     * addresses collapsed to IPv4; null when the value is not an IP address.
+     */
+    private static function toPacked(string $ip): ?string
+    {
+        $ip = \trim($ip);
+        if (\filter_var($ip, \FILTER_VALIDATE_IP) === false) {
+            return null;
+        }
+        $raw = \inet_pton($ip);
+
+        return $raw === false ? null : self::collapse($raw);
+    }
+
+    private static function toText(string $packed): ?string
+    {
+        $text = \inet_ntop($packed);
+
+        return $text === false ? null : $text;
+    }
+
+    private static function isMapped(string $raw): bool
+    {
+        return \strlen($raw) === 16 && \str_starts_with($raw, "\0\0\0\0\0\0\0\0\0\0\xff\xff");
+    }
+
+    private static function collapse(string $raw): string
+    {
+        return self::isMapped($raw) ? \substr($raw, 12) : $raw;
     }
 }
