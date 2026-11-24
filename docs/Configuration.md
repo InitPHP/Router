@@ -106,7 +106,7 @@ used by [`ip()` groups](Route-Groups.md#client-ip-groups--ip) comes from:
 
 ```php
 $router = new Router($request, $response, [
-    'trusted_proxies' => ['10.0.0.0/8', '192.0.2.5', 'fd00::/8'],
+    'trusted_proxies' => ['192.0.2.5', '10.0.5.0/28'], // your proxies only, never a whole internal network
 ]);
 ```
 
@@ -132,10 +132,14 @@ $router = new Router($request, $response, [
 - An option that is not an array, or an entry that is not an IP address or CIDR
   range, makes the constructor throw [`InvalidArgumentException`](Exceptions.md),
   so a typo does not silently trust nothing, or everything.
-- With a PSR-7 server request the server parameters (`REMOTE_ADDR`, the headers
-  as `HTTP_*`) are taken from `getServerParams()` when it returns any, otherwise
-  from `$_SERVER`. A plain request has no server parameters, so `$_SERVER` is
-  used.
+- With a PSR-7 server request, `REMOTE_ADDR` is taken from `getServerParams()`
+  when it returns any, otherwise from `$_SERVER`; a bag without `REMOTE_ADDR`
+  yields no client address (`null`), so no `ip()` group matches. The
+  `X-Forwarded-For` header is read from the request itself (`getHeader()`,
+  several header lines are joined in order), because the server parameters of some
+  runtimes (ReactPHP) carry no `HTTP_*` entries; `HTTP_X_FORWARDED_FOR` is only
+  the fallback when the request has no such header. A plain request has no server
+  parameters, so `$_SERVER` is used.
 
 List only proxies you operate. A range wider than your real proxies (for example
 `0.0.0.0/0`, or a whole internal network) lets a client forge the address again.

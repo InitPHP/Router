@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `trusted_proxies` Router option (IP addresses and CIDR ranges).
+- `RequestContext::normalizeIp()`: the canonical text form of an IP address
+  (IPv4-mapped IPv6 collapsed to IPv4, IPv6 lower-case and shortened), used to
+  compare client addresses with `ip()` allow-list entries.
+
 ### Changed (breaking)
 
 - **The client IP is `REMOTE_ADDR` by default.** `ip()` groups no longer trust
@@ -25,8 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   form (IPv4-mapped IPv6 collapsed to IPv4, IPv6 lower-case and shortened), so
   `ip('::ffff:192.0.2.10')` now matches the IPv4 client `192.0.2.10`.
 - With a PSR-7 server request, `RequestContext` takes the server parameters from
-  `getServerParams()` (when it returns any) and `_method` from its parsed body
-  only, instead of `$_SERVER` and `$_POST`.
+  `getServerParams()` (when it returns any), `X-Forwarded-For` from the request's
+  header lines (falling back to `HTTP_X_FORWARDED_FOR`) and `_method` from its
+  parsed body only, instead of `$_SERVER` and `$_POST`.
 - `trusted_proxies` that is not an array throws `InvalidArgumentException`.
 - `RequestContext`: the `$requestParams` constructor argument now means the POST
   parameters, and a new last argument `$trustedProxies` was added.

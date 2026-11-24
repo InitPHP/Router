@@ -34,8 +34,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * `$_POST` otherwise) — never from the query string.
  *
  * With a PSR-7 server request the request is the source of truth: its server
- * parameters (when it carries any) and its parsed body are used instead of the
- * superglobals.
+ * parameters (when it carries any), its `X-Forwarded-For` header lines and its
+ * parsed body are used instead of the superglobals. Server parameters of some
+ * runtimes (ReactPHP) carry no `HTTP_*` entries, so the header is read from the
+ * request itself; the `HTTP_X_FORWARDED_FOR` server parameter is the fallback.
  *
  * The parameter bags are injectable so the detection logic is testable without
  * touching superglobals.
@@ -71,8 +73,12 @@ final class RequestContext
         ?array $requestParams = null,
         array $trustedProxies = [],
     ) {
+        $forwardedFor = null;
         if ($request instanceof ServerRequestInterface) {
             $serverParams ??= $request->getServerParams() !== [] ? $request->getServerParams() : $_SERVER;
+            // Several header lines keep their order: the proxy nearest to us appended last.
+            $lines = $request->getHeader('X-Forwarded-For');
+            $forwardedFor = $lines === [] ? null : \implode(',', $lines);
             $parsedBody = $request->getParsedBody();
             $requestParams ??= \is_array($parsedBody) ? $parsedBody : (\is_object($parsedBody) ? (array) $parsedBody : []);
         } else {
@@ -85,7 +91,8 @@ final class RequestContext
         }
 
         $this->method = $this->detectMethod($request, $variableMethod, $supportedMethods, $requestParams);
-        $this->clientIp = $this->detectClientIp($serverParams);
+        $forwardedFor ??= $serverParams['HTTP_X_FORWARDED_FOR'] ?? null;
+        $this->clientIp = $this->detectClientIp($serverParams, $forwardedFor);
     }
 
     public function getMethod(): string
@@ -120,13 +127,12 @@ final class RequestContext
     /**
      * @param array<string, mixed> $serverParams
      */
-    private function detectClientIp(array $serverParams): ?string
+    private function detectClientIp(array $serverParams, mixed $forwarded): ?string
     {
         $remote = \is_string($serverParams['REMOTE_ADDR'] ?? null) ? self::toPacked($serverParams['REMOTE_ADDR']) : null;
         if ($remote === null) {
             return null;
         }
-        $forwarded = $serverParams['HTTP_X_FORWARDED_FOR'] ?? null;
         if ($this->trustedProxies === [] || !$this->isTrusted($remote) || !\is_string($forwarded) || \trim($forwarded) === '') {
             return self::toText($remote);
         }
