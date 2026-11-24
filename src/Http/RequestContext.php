@@ -75,10 +75,13 @@ final class RequestContext
     ) {
         $forwardedFor = null;
         if ($request instanceof ServerRequestInterface) {
-            $serverParams ??= $request->getServerParams() !== [] ? $request->getServerParams() : $_SERVER;
-            // Several header lines keep their order: the proxy nearest to us appended last.
-            $lines = $request->getHeader('X-Forwarded-For');
-            $forwardedFor = $lines === [] ? null : \implode(',', $lines);
+            if ($serverParams === null) {
+                $serverParams = $request->getServerParams() !== [] ? $request->getServerParams() : $_SERVER;
+                // Several header lines keep their order: the proxy nearest to us appended last.
+                // Explicitly injected server parameters are used as given, never overridden by the request.
+                $lines = $request->getHeader('X-Forwarded-For');
+                $forwardedFor = $lines === [] ? null : \implode(',', $lines);
+            }
             $parsedBody = $request->getParsedBody();
             $requestParams ??= \is_array($parsedBody) ? $parsedBody : (\is_object($parsedBody) ? (array) $parsedBody : []);
         } else {

@@ -381,4 +381,20 @@ final class RequestContextTest extends TestCase
         $this->assertSame('10.0.0.1', RequestContext::normalizeIp(' 10.0.0.1 '));
         $this->assertNull(RequestContext::normalizeIp('not-an-ip'));
     }
+
+    public function testInjectedServerParamsAreNotOverriddenByTheRequestHeader(): void
+    {
+        $request = new ServerRequest('GET', 'http://localhost/', ['X-Forwarded-For' => '127.0.0.1'], null, '1.1', ['REMOTE_ADDR' => '10.0.0.1']);
+
+        $injected = new RequestContext($request, false, self::SUPPORTED, [
+            'REMOTE_ADDR'          => '10.0.0.1',
+            'HTTP_X_FORWARDED_FOR' => '198.51.100.9',
+        ], null, ['10.0.0.1']);
+        $injectedWithoutHeader = new RequestContext($request, false, self::SUPPORTED, ['REMOTE_ADDR' => '10.0.0.1'], null, ['10.0.0.1']);
+        $fromRequest = new RequestContext($request, false, self::SUPPORTED, null, null, ['10.0.0.1']);
+
+        $this->assertSame('198.51.100.9', $injected->getClientIp());
+        $this->assertSame('10.0.0.1', $injectedWithoutHeader->getClientIp());
+        $this->assertSame('127.0.0.1', $fromRequest->getClientIp());
+    }
 }
