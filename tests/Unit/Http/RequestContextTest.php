@@ -320,4 +320,65 @@ final class RequestContextTest extends TestCase
 
         new RequestContext($this->request(), false, self::SUPPORTED, [], null, [10]);
     }
+
+    public function testServerRequestParamsWinOverTheSuperglobal(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $request = new ServerRequest('GET', 'http://localhost/', [], null, '1.1', ['REMOTE_ADDR' => '198.51.100.9']);
+
+        $context = new RequestContext($request, false, self::SUPPORTED);
+
+        $this->assertSame('198.51.100.9', $context->getClientIp());
+    }
+
+    public function testServerRequestWithoutServerParamsFallsBackToTheSuperglobal(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '192.0.2.44';
+        $request = new ServerRequest('GET', 'http://localhost/', [], null, '1.1');
+
+        $context = new RequestContext($request, false, self::SUPPORTED);
+
+        $this->assertSame('192.0.2.44', $context->getClientIp());
+    }
+
+    public function testServerRequestWithoutParsedBodyIgnoresThePostSuperglobal(): void
+    {
+        $_POST = ['_method' => 'DELETE'];
+
+        try {
+            $context = new RequestContext(
+                (new ServerRequest('POST', 'http://localhost/', [], null, '1.1', ['REMOTE_ADDR' => '192.0.2.1']))->withParsedBody(null),
+                true,
+                self::SUPPORTED,
+            );
+        } finally {
+            $_POST = [];
+        }
+
+        $this->assertSame('POST', $context->getMethod());
+    }
+
+    public function testServerRequestWithObjectParsedBodyIgnoresThePostSuperglobal(): void
+    {
+        $_POST = ['_method' => 'DELETE'];
+        $request = (new ServerRequest('POST', 'http://localhost/', [], null, '1.1', ['REMOTE_ADDR' => '192.0.2.1']))
+            ->withParsedBody((object) ['_method' => 'PUT']);
+
+        try {
+            $context = new RequestContext($request, true, self::SUPPORTED);
+        } finally {
+            $_POST = [];
+        }
+
+        $this->assertSame('PUT', $context->getMethod());
+    }
+
+    public function testNormalizeIp(): void
+    {
+        $this->assertSame('192.0.2.10', RequestContext::normalizeIp('::ffff:192.0.2.10'));
+        $this->assertSame('192.0.2.10', RequestContext::normalizeIp('::FFFF:C000:020A'));
+        $this->assertSame('2001:db8::5', RequestContext::normalizeIp('2001:DB8:0:0:0:0:0:5'));
+        $this->assertSame('10.0.0.1', RequestContext::normalizeIp(' 10.0.0.1 '));
+        $this->assertNull(RequestContext::normalizeIp('not-an-ip'));
+    }
 }

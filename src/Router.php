@@ -172,13 +172,27 @@ class Router
             self::SUPPORTED_METHODS,
             null,
             null,
-            \is_array($this->configs['trusted_proxies']) ? \array_values($this->configs['trusted_proxies']) : [],
+            $this->trustedProxies(),
         );
         $this->currentMethod = $context->getMethod();
         $this->currentIp = $context->getClientIp();
 
         $this->cache = new RouteCache($this->cacheConfigs);
         $this->cacheStart();
+    }
+
+    /**
+     * @return list<mixed>
+     * @throws InvalidArgumentException When "trusted_proxies" is set but is not a list of IP addresses/ranges.
+     */
+    private function trustedProxies(): array
+    {
+        $proxies = $this->configs['trusted_proxies'] ?? [];
+        if (!\is_array($proxies)) {
+            throw new InvalidArgumentException('The "trusted_proxies" option must be an array of IP addresses or CIDR ranges.');
+        }
+
+        return \array_values($proxies);
     }
 
     public function __destruct()

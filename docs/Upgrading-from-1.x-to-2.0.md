@@ -110,7 +110,9 @@ could be forged. **After 3.0.0** the address is `REMOTE_ADDR`; `X-Forwarded-For`
 read only behind the proxies listed in the
 [`trusted_proxies`](Configuration.md#trusted_proxies) option, and `Client-IP` is
 never read. If your app sits behind a reverse proxy or load balancer, set
-`trusted_proxies`, otherwise `ip()` groups see the proxy's address. See the
+`trusted_proxies`, otherwise `ip()` groups see the proxy's address. **If that
+address is in an `ip()` list (a proxy on the same machine, `ip('127.0.0.1', ...)`),
+the group is open to every visitor until you set it.** See the
 warning in [Route Groups](Route-Groups.md#client-ip-groups--ip).
 
 ## PSR-11 container

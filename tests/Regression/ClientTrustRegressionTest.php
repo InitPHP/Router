@@ -149,4 +149,100 @@ final class ClientTrustRegressionTest extends RegressionTestCase
 
         $this->assertSame('destroy', (string) $router->dispatch()->getBody());
     }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function invalidTrustedProxiesOption(): array
+    {
+        return [
+            'string'  => ['127.0.0.1'],
+            'bool'    => [true],
+            'int'     => [10],
+            'false'   => [false],
+        ];
+    }
+
+    /**
+     * @dataProvider invalidTrustedProxiesOption
+     * @param mixed $value
+     */
+    public function testNonArrayTrustedProxiesFailsFastInsteadOfOpeningTheGroup(mixed $value): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '198.51.100.9';
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->makeRouter(configs: ['trusted_proxies' => $value]);
+    }
+
+    public function testNullTrustedProxiesMeansNone(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.9';
+
+        $router = $this->makeRouter(configs: ['trusted_proxies' => null]);
+        $this->internalRoutes($router);
+
+        $this->assertNull($router->resolve('GET', 'http://localhost/internal'));
+    }
+
+    public function testSubclassWithoutTheTrustedProxiesKeyDoesNotWarn(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '192.0.2.1';
+        $request = new \InitPHP\HTTP\Message\Request('GET', 'http://localhost/', [], null, '1.1');
+        $response = new \InitPHP\HTTP\Message\Response(200, [], new \InitPHP\HTTP\Message\Stream('', null), '1.1');
+
+        $router = new class ($request, $response) extends Router {
+            /** @var array<string, mixed> */
+            protected array $configs = [
+                'paths'                 => ['controller' => null, 'middleware' => null],
+                'namespaces'            => ['controller' => null, 'middleware' => null],
+                'base_path'             => '/',
+                'variable_method'       => false,
+                'argument_new_instance' => false,
+            ];
+        };
+
+        $this->assertInstanceOf(Router::class, $router);
+    }
+
+    public function testMappedIpv6AllowListEntryMatchesTheSameClientInAnyForm(): void
+    {
+        foreach (['::ffff:192.0.2.10', '192.0.2.10'] as $remote) {
+            $_SERVER['REMOTE_ADDR'] = $remote;
+
+            $router = $this->makeRouter();
+            $router->ip('::ffff:192.0.2.10', static function (Router $route): void {
+                $route->get('/banner', static fn(): string => 'banner');
+            });
+
+            $this->assertNotNull($router->resolve('GET', 'http://localhost/banner'), $remote);
+        }
+    }
+
+    public function testUpperCaseIpv6AllowListEntryMatchesTheCanonicalClient(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '10.0.0.1';
+        $_SERVER['HTTP_X_FORWARDED_FOR'] = '2001:DB8::5';
+
+        $router = $this->makeRouter(configs: ['trusted_proxies' => ['10.0.0.1']]);
+        $router->ip(['2001:DB8::5', '2001:db8:0:0:0:0:0:6'], static function (Router $route): void {
+            $route->get('/banner', static fn(): string => 'banner');
+        });
+
+        $this->assertNotNull($router->resolve('GET', 'http://localhost/banner'));
+    }
+
+    public function testAllowListNormalisationDoesNotWidenTheMatch(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '192.0.2.11';
+
+        $router = $this->makeRouter();
+        $router->ip('::ffff:192.0.2.10', static function (Router $route): void {
+            $route->get('/banner', static fn(): string => 'banner');
+        });
+
+        $this->assertNull($router->resolve('GET', 'http://localhost/banner'));
+    }
 }

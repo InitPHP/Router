@@ -92,7 +92,8 @@ function assertValidCsrfToken(): void
 > The override is still not a substitute for a CSRF token: a cross-site HTML form
 > can submit a `POST` with `_method=DELETE` in its body, so keep the token check
 > above on every state-changing route. A PSR-7 server request whose parsed body
-> comes from a JSON payload (`{"_method": "DELETE"}`) is read the same way.
+> comes from a JSON payload (`{"_method": "DELETE"}`) is read the same way. With a
+> PSR-7 server request only its parsed body counts, never `$_POST`.
 >
 > Leave `variable_method` off (the default) for JSON APIs and any app that does
 > not submit HTML forms.
@@ -115,20 +116,34 @@ $router = new Router($request, $response, [
 - When `REMOTE_ADDR` is one of the listed proxies, `X-Forwarded-For` is read
   from **right to left**. Each trusted proxy is skipped, and the first address
   that is not trusted is the client. If every entry is trusted, the leftmost one
-  is used. Entries a client added to the left of what your proxy appended are
-  never reached.
+  is used. As long as the client's own address is **not** in the list, entries it
+  added to the left of what your proxy appended are never reached. A client whose
+  address is inside a listed range (an internal host in `10.0.0.0/8`, say) is
+  skipped like a proxy, and the value it wrote to the left is read instead, so
+  list your proxies' addresses, not whole internal networks.
 - An entry that is not a valid IP address (`unknown`, a value with a port such
   as `203.0.113.7:4711`, an empty item) breaks the chain: no client address is
   reported (it is `null`), so no `ip()` group matches. Configure the proxy to
   send bare addresses.
 - IPv4-mapped IPv6 addresses (`::ffff:192.0.2.10`) are treated as the IPv4
-  address, both in `REMOTE_ADDR` / the header and in the list.
-- An entry that is not an IP address or CIDR range makes the constructor throw
-  [`InvalidArgumentException`](Exceptions.md), so a typo does not silently trust
-  nothing, or everything.
+  address in `REMOTE_ADDR`, in the header, in `trusted_proxies` and in the
+  `ip()` allow-list. Addresses are compared in canonical form, so
+  `2001:DB8::5` in an `ip()` list matches a client `2001:db8::5`.
+- An option that is not an array, or an entry that is not an IP address or CIDR
+  range, makes the constructor throw [`InvalidArgumentException`](Exceptions.md),
+  so a typo does not silently trust nothing, or everything.
+- With a PSR-7 server request the server parameters (`REMOTE_ADDR`, the headers
+  as `HTTP_*`) are taken from `getServerParams()` when it returns any, otherwise
+  from `$_SERVER`. A plain request has no server parameters, so `$_SERVER` is
+  used.
 
 List only proxies you operate. A range wider than your real proxies (for example
-`0.0.0.0/0`) lets any client forge the address again.
+`0.0.0.0/0`, or a whole internal network) lets a client forge the address again.
+
+> **Upgrading with a proxy on the same machine or network.** If the proxy's own
+> address is in an `ip()` list (for example `ip('127.0.0.1', ...)` behind a local
+> nginx), do not upgrade without setting `trusted_proxies`: every visitor then
+> appears to come from the proxy, and the group opens to everyone.
 
 ### `argument_new_instance`
 

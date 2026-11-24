@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace InitPHP\Router\Matching;
 
+use InitPHP\Router\Http\RequestContext;
 use InitPHP\Router\Link\FileLinkHandler;
 use InitPHP\Router\Route;
 use InitPHP\Router\RouteCollection;
@@ -43,7 +44,12 @@ final class RouteMatcher
         foreach ($this->routes->candidates($method) as $route) {
             $ip = $route->getOption('ip');
             if (!empty($ip)) {
-                $allowed = \is_array($ip) ? $ip : [$ip];
+                // Compare in canonical form: the client address is canonical, the
+                // allow-list may hold "::ffff:192.0.2.10" or "2001:DB8::5".
+                $allowed = \array_map(
+                    static fn(mixed $address): mixed => \is_string($address) ? (RequestContext::normalizeIp($address) ?? $address) : $address,
+                    \is_array($ip) ? $ip : [$ip],
+                );
                 if (!\in_array($clientIp, $allowed, true)) {
                     continue;
                 }

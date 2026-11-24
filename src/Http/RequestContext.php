@@ -33,6 +33,10 @@ use Psr\Http\Message\ServerRequestInterface;
  * and only from the POST parameters (the parsed body on a PSR-7 server request,
  * `$_POST` otherwise) — never from the query string.
  *
+ * With a PSR-7 server request the request is the source of truth: its server
+ * parameters (when it carries any) and its parsed body are used instead of the
+ * superglobals.
+ *
  * The parameter bags are injectable so the detection logic is testable without
  * touching superglobals.
  */
@@ -49,9 +53,11 @@ final class RequestContext
 
     /**
      * @param list<string> $supportedMethods Methods accepted for "_method" override.
-     * @param array<string, mixed>|null $serverParams Defaults to $_SERVER.
+     * @param array<string, mixed>|null $serverParams Defaults to the server parameters of a PSR-7
+     * server request when it has any, otherwise to $_SERVER.
      * @param array<string, mixed>|null $requestParams POST parameters read for the "_method" override.
-     * Defaults to the parsed body of a PSR-7 server request when it is an array, otherwise to $_POST.
+     * Defaults to the parsed body of a PSR-7 server request (an array or an object; none when it is
+     * null), otherwise to $_POST.
      * @param list<mixed> $trustedProxies IP addresses or CIDR ranges (IPv4 or IPv6) of the proxies
      * whose X-Forwarded-For header may be trusted, as strings; any other value is rejected.
      * Empty by default: the header is ignored.
@@ -65,10 +71,13 @@ final class RequestContext
         ?array $requestParams = null,
         array $trustedProxies = [],
     ) {
-        $serverParams ??= $_SERVER;
-        if ($requestParams === null) {
-            $parsedBody = $request instanceof ServerRequestInterface ? $request->getParsedBody() : null;
-            $requestParams = \is_array($parsedBody) ? $parsedBody : $_POST;
+        if ($request instanceof ServerRequestInterface) {
+            $serverParams ??= $request->getServerParams() !== [] ? $request->getServerParams() : $_SERVER;
+            $parsedBody = $request->getParsedBody();
+            $requestParams ??= \is_array($parsedBody) ? $parsedBody : (\is_object($parsedBody) ? (array) $parsedBody : []);
+        } else {
+            $serverParams ??= $_SERVER;
+            $requestParams ??= $_POST;
         }
 
         foreach ($trustedProxies as $proxy) {
@@ -139,6 +148,19 @@ final class RequestContext
         }
 
         return self::toText($client);
+    }
+
+    /**
+     * The canonical text form of an IP address (IPv4-mapped IPv6 collapsed to
+     * IPv4, IPv6 in its short lower-case form); null when the value is not an IP
+     * address. Client addresses and `ip()` allow-list entries are compared in
+     * this form.
+     */
+    public static function normalizeIp(string $ip): ?string
+    {
+        $packed = self::toPacked($ip);
+
+        return $packed === null ? null : self::toText($packed);
     }
 
     private function isTrusted(string $packed): bool

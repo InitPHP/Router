@@ -21,13 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request and only from the POST parameters** (the parsed body of a PSR-7 server
   request, otherwise `$_POST`). `GET` requests and `_method` in the query string
   are ignored; `$_REQUEST` is no longer read.
+- `ip()` allow-list entries and the client address are compared in canonical
+  form (IPv4-mapped IPv6 collapsed to IPv4, IPv6 lower-case and shortened), so
+  `ip('::ffff:192.0.2.10')` now matches the IPv4 client `192.0.2.10`.
+- With a PSR-7 server request, `RequestContext` takes the server parameters from
+  `getServerParams()` (when it returns any) and `_method` from its parsed body
+  only, instead of `$_SERVER` and `$_POST`.
+- `trusted_proxies` that is not an array throws `InvalidArgumentException`.
 - `RequestContext`: the `$requestParams` constructor argument now means the POST
   parameters, and a new last argument `$trustedProxies` was added.
 
 #### Upgrading
 
 - Behind a reverse proxy or load balancer, set `trusted_proxies` to its address
-  or network; without it `ip()` groups see the proxy's address. Have the proxy
+  (not a whole internal network) before upgrading; without it `ip()` groups see
+  the proxy's address. **If that address is in an `ip()` list (for example a
+  proxy on the same machine with `ip('127.0.0.1', ...)`), the group opens to every
+  visitor until you set it.** Have the proxy
   append the peer it saw to `X-Forwarded-For` and send bare IP addresses (no
   ports).
 - If a client submitted `_method` with a `GET` request or in the query string,

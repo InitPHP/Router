@@ -6,7 +6,7 @@ All router exceptions live under the `InitPHP\Router\Exception` namespace.
 | --- | --- | --- |
 | `RouterException` | `\RuntimeException` | A controller/middleware can't be resolved, a route name is duplicated, a filter is invalid, a parameter can't be resolved, the route cache can't be read, etc. |
 | `PageNotFoundException` | `RouterException` | No route matched the request and no 404 handler is defined. |
-| `InvalidArgumentException` | `\InvalidArgumentException` | An argument has an invalid type or value (an unsupported HTTP method, a bad handler type, an invalid IP address, a missing link source). |
+| `InvalidArgumentException` | `\InvalidArgumentException` | An argument has an invalid type or value (an unsupported HTTP method, a bad handler type, an invalid IP address, an invalid `trusted_proxies` option or entry, a missing link source). |
 
 ## Hierarchy
 
