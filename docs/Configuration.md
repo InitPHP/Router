@@ -54,10 +54,39 @@ $router->put('/articles/{id}', 'ArticleController@update');
 ```html
 <form method="post" action="/articles/42">
     <input type="hidden" name="_method" value="PUT">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 </form>
 ```
 
 The override is only honoured when the value is one of the supported methods.
+
+Check the token before the handler changes anything, in the handler or in a
+middleware (the session must be started and hold the token you rendered into the
+form):
+
+```php
+function assertValidCsrfToken(): void
+{
+    $expected = (string) ($_SESSION['csrf_token'] ?? '');
+    $sent     = (string) ($_POST['csrf_token'] ?? ''); // request body only, never the query string
+
+    if ($expected === '' || !hash_equals($expected, $sent)) {
+        http_response_code(403);
+        exit('Invalid CSRF token.');
+    }
+}
+```
+
+> **Warning: the override also applies to `GET` requests.** The router reads
+> `_method` from `$_REQUEST` (query string and body) and does not require the
+> real request method to be `POST`. With this option on, a link such as
+> `https://example.com/articles/42?_method=DELETE` is routed as `DELETE`, and a
+> logged-in user who follows it (a top-level navigation sends `SameSite=Lax`
+> cookies) triggers the handler. That is why the token above is required for
+> every state-changing route, and why it must come from the request body.
+>
+> Leave `variable_method` off (the default) for JSON APIs and any app that does
+> not submit HTML forms.
 
 ### `argument_new_instance`
 

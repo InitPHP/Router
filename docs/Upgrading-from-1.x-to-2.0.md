@@ -104,9 +104,11 @@ $router->setNotFoundHandler($handler);
 
 The client IP used by `ip()` groups is now read from the **server parameters**
 (`$_SERVER`: `HTTP_CLIENT_IP`, then `HTTP_X_FORWARDED_FOR`, then `REMOTE_ADDR`),
-rather than `getenv()`. For typical web requests this is the more reliable
-source. If you run behind a proxy, ensure the forwarded headers are present in
-`$_SERVER` as usual.
+rather than `getenv()`. The first two are request headers that any client can
+send, and the router does not check them against a trusted proxy list, so the
+detected address is **not trustworthy** unless your edge strips or overwrites
+those headers. Do not use it for access control — see the warning in
+[Route Groups](Route-Groups.md#client-ip-groups--ip).
 
 ## PSR-11 container
 
