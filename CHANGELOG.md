@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.0.0] - 2026-11-25
 
 ### Added
 
@@ -61,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `503` body. Invalid bytes are now replaced with U+FFFD.
 - `HealthEndpoints`: the readiness body encodes `checks` as a JSON object also
   when it is empty (`"checks":{}` instead of `"checks":[]`).
+
+### Documentation
+
+- New [Health Checks](docs/Health-Checks.md) and
+  [Readiness Linter](docs/Readiness-Linter.md) pages for the probe endpoints and
+  the CI gate, linked from the README, Home, the API reference, Caching and the
+  sidebar.
+- Configuration and Route Groups state that `ip()` groups, `port()`, `domain()`
+  and the `_method` override are routing selectors, not access controls;
+  `variable_method` gains a CSRF-token example, and Health Checks advises limiting
+  the probe routes at the proxy or firewall.
 
 ## [3.0.0] - 2026-11-22
 
@@ -167,5 +178,6 @@ migration steps.
   preventing path traversal.
 - Route-cache `unserialize()` is hardened with `allowed_classes: false`.
 
+[4.0.0]: https://github.com/InitPHP/Router/compare/3.0.0...4.0.0
 [3.0.0]: https://github.com/InitPHP/Router/compare/2.1.0...3.0.0
 [2.0.0]: https://github.com/InitPHP/Router/compare/1.2.1...2.0.0
