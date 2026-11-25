@@ -80,8 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the CI gate, linked from the README, Home, the API reference, Caching and the
   sidebar.
 - Route Groups state that `ip()`, `domain()` and `port()` are routing selectors,
-  not access controls, and warn about a proxy address that is in an `ip()` list.
-- Configuration documents `trusted_proxies`, says the `_method` override applies
+  not access controls, and that a proxy has to be listed in `trusted_proxies`.
+- Configuration documents `trusted_proxies`, warns that a proxy address that is in an
+  `ip()` list opens the group until `trusted_proxies` is set (the "Upgrading from 1.x
+  to 2.0" page carries the same warning), says the `_method` override applies
   only to the POST body of a real `POST` request and is no substitute for a CSRF
   token (with an example), and Health Checks advises limiting the probe routes at
   the proxy or firewall.
