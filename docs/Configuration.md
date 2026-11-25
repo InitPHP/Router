@@ -81,7 +81,7 @@ function assertValidCsrfToken(): void
 }
 ```
 
-> **Changed after 3.0.0: the override no longer applies to `GET` requests.**
+> **Changed in 4.0.0: the override no longer applies to `GET` requests.**
 > Releases up to 3.0.0 read `_method` from `$_REQUEST` (query string and body) and did not
 > require a real `POST`, so a link such as
 > `https://example.com/articles/42?_method=DELETE` was routed as `DELETE`. Now a

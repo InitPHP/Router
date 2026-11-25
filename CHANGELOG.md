@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0] - 2026-11-25
 
+### Security
+
+- **Affected versions: every release up to and including 3.0.0** (the tags 1.1.3,
+  1.2, 1.2.1, 2.0.0, 2.1.0 and 3.0.0 were checked; older history is not tagged in
+  this repository and was not assessed). `ip()` groups trusted the `Client-IP` and
+  `X-Forwarded-For` headers (1.x through `getenv()`, 2.0.0 and later through
+  `$_SERVER`), which any client can send, so an `ip()` allow-list could be opened by
+  forging an address. With `variable_method` on, `_method` was read from
+  `$_REQUEST`, so a `GET` request or a query string could be routed as another
+  method. Both are fixed by the breaking changes below; see *Upgrading*.
+
 ### Added
 
 - `trusted_proxies` Router option (IP addresses and CIDR ranges).
@@ -68,10 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Readiness Linter](docs/Readiness-Linter.md) pages for the probe endpoints and
   the CI gate, linked from the README, Home, the API reference, Caching and the
   sidebar.
-- Configuration and Route Groups state that `ip()` groups, `port()`, `domain()`
-  and the `_method` override are routing selectors, not access controls;
-  `variable_method` gains a CSRF-token example, and Health Checks advises limiting
-  the probe routes at the proxy or firewall.
+- Route Groups state that `ip()`, `domain()` and `port()` are routing selectors,
+  not access controls, and warn about a proxy address that is in an `ip()` list.
+- Configuration documents `trusted_proxies`, says the `_method` override applies
+  only to the POST body of a real `POST` request and is no substitute for a CSRF
+  token (with an example), and Health Checks advises limiting the probe routes at
+  the proxy or firewall.
+- Exceptions lists the new `InvalidArgumentException` cases, and the "Upgrading from
+  1.x to 2.0" page now says which releases trusted the client-IP headers.
 
 ## [3.0.0] - 2026-11-22
 

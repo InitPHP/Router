@@ -106,7 +106,7 @@ The client IP used by `ip()` groups is now read from the **server parameters**
 (`$_SERVER`), rather than `getenv()`. Releases 2.0 through 3.0.0 read
 `HTTP_CLIENT_IP`, then `HTTP_X_FORWARDED_FOR`, then `REMOTE_ADDR`, without
 checking that the headers came from a proxy you trust, so the detected address
-could be forged. **After 3.0.0** the address is `REMOTE_ADDR`; `X-Forwarded-For` is
+could be forged. **From 4.0.0** the address is `REMOTE_ADDR`; `X-Forwarded-For` is
 read only behind the proxies listed in the
 [`trusted_proxies`](Configuration.md#trusted_proxies) option, and `Client-IP` is
 never read. If your app sits behind a reverse proxy or load balancer, set
