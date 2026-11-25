@@ -32,7 +32,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.88",
-        "initphp/http": "^4.0",
+        "initphp/http": "^5.0",
         "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^9.6"
     },
