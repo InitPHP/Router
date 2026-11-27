@@ -845,9 +845,14 @@ class Router
                     $data[$key] .= $value;
                     continue;
                 }
-                if ($key === 'middleware' && \is_array($value) && \is_array($data[$key] ?? null)) {
-                    $data[$key] = $this->middlewareMerge($data[$key], $value);
-                    continue;
+                if ($key === 'middleware') {
+                    // A single middleware (a name or a closure) is a one-entry list.
+                    $outer = \is_string($data[$key] ?? null) || ($data[$key] ?? null) instanceof \Closure ? [$data[$key]] : ($data[$key] ?? null);
+                    $inner = \is_string($value) || $value instanceof \Closure ? [$value] : $value;
+                    if (\is_array($outer) && \is_array($inner)) {
+                        $data[$key] = $this->middlewareMerge($outer, $inner);
+                        continue;
+                    }
                 }
                 if ($key === 'ip' && isset($data[$key]) && $data[$key] !== [] && $data[$key] !== '') {
                     $data[$key] = $this->ipIntersect($data[$key], $value);

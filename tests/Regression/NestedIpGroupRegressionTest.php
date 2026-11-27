@@ -162,6 +162,31 @@ final class NestedIpGroupRegressionTest extends RegressionTestCase
         );
     }
 
+    public function testSingleStringMiddlewareAddsToTheGroupMiddleware(): void
+    {
+        $router = $this->makeRouter();
+        $router->group('/admin', static function (Router $route): void {
+            $route->get('/s', static fn(): string => 's', ['middleware' => 'Csrf']);
+            $route->group('/sub', static function (Router $route): void {
+                $route->get('/t', static fn(): string => 't');
+            }, ['middleware' => 'Throttle']);
+        }, ['middleware' => ['Auth']]);
+
+        $routes = $router->getRoutes('GET');
+        $this->assertSame(['Auth', 'Csrf'], $routes['http://localhost/admin/s']['options']['middleware']);
+        $this->assertSame(['Auth', 'Throttle'], $routes['http://localhost/admin/sub/t']['options']['middleware']);
+    }
+
+    public function testStringGroupMiddlewareAcceptsARouteList(): void
+    {
+        $router = $this->makeRouter();
+        $router->group('/admin', static function (Router $route): void {
+            $route->get('/s', static fn(): string => 's', ['middleware' => ['Csrf']]);
+        }, ['middleware' => 'Auth']);
+
+        $this->assertSame(['Auth', 'Csrf'], $router->getRoutes('GET')['http://localhost/admin/s']['options']['middleware']);
+    }
+
     public function testMiddlewareBucketsAccumulatePerBucket(): void
     {
         $router = $this->makeRouter();

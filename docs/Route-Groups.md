@@ -149,8 +149,8 @@ $router->domain('{tenant}.example.com', function (Router $route) {
 });
 ```
 
-Next: [Controllers](Controllers.md).
-
 If a group callback throws, the router restores the options of the enclosing level
 before the exception propagates, so code that catches it and keeps registering
-routes does not inherit the failed group's `prefix`, `host`, `port` or `ip`.
+routes does not inherit the failed group's `prefix`, `host`, `port`, `ip` or `middleware`.
+
+Next: [Controllers](Controllers.md).
