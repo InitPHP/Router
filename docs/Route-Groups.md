@@ -92,7 +92,28 @@ $router->ip(['203.0.113.10', '203.0.113.11'], function (Router $route) {
 
 Requests from any other address simply do not match these routes, so they fall
 through to a 404 unless another route matches. An invalid IP address throws
-[`InvalidArgumentException`](Exceptions.md). See
+[`InvalidArgumentException`](Exceptions.md).
+
+`ip()` groups nest by **intersection**: a nested group can only narrow the access
+list, never widen it. Addresses are compared in canonical form, so
+`::ffff:203.0.113.10` and `203.0.113.10` are the same address. If the lists have
+no address in common, registering the group throws
+[`InvalidArgumentException`](Exceptions.md); an empty intersection never means
+"everyone".
+
+```php
+$router->ip(['203.0.113.10', '203.0.113.11'], function (Router $route) {
+    $route->ip('203.0.113.10', function (Router $route) {
+        // Only 203.0.113.10; a request from 203.0.113.11 does not match.
+        $route->get('/banner-editor', 'BannerController@edit');
+    });
+});
+```
+
+> **Changed in 5.0.0.** Nested `ip()` lists used to be merged by position, so an
+> inner `ip(['203.0.113.10'])` inside `ip(['203.0.113.10', '203.0.113.11'])` also
+> accepted `203.0.113.11`. Review nested `ip()` groups: where the inner list used to
+> widen the outer one, the router now throws. See
 [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#client-ip-detection) for how the
 client IP is detected.
 

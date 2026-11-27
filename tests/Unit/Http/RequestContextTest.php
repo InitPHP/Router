@@ -40,6 +40,15 @@ final class RequestContextTest extends TestCase
         $this->assertSame('POST', $context->getMethod());
     }
 
+    public function testMethodOverrideToAnyOrLinkIsIgnored(): void
+    {
+        foreach (['ANY', 'any', 'LINK', 'link'] as $override) {
+            $context = new RequestContext($this->request('POST'), true, self::SUPPORTED, [], ['_method' => $override]);
+
+            $this->assertSame('POST', $context->getMethod(), $override . ' must not override');
+        }
+    }
+
     public function testMethodOverrideRequiresARealPostRequest(): void
     {
         foreach (['GET', 'HEAD', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'] as $real) {

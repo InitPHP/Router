@@ -31,7 +31,8 @@ use Psr\Http\Message\ServerRequestInterface;
  *
  * Method override: `_method` is honoured only when the real method is `POST`,
  * and only from the POST parameters (the parsed body on a PSR-7 server request,
- * `$_POST` otherwise) — never from the query string.
+ * `$_POST` otherwise) — never from the query string. `ANY` and `LINK` are route
+ * kinds, not HTTP methods, so they are never accepted as an override.
  *
  * With a PSR-7 server request the request is the source of truth: its server
  * parameters (when it carries any), its `X-Forwarded-For` header lines and its
@@ -123,6 +124,11 @@ final class RequestContext
             return $method;
         }
         $override = \strtoupper($requestParams['_method']);
+
+        // "ANY" and "LINK" are route kinds, not HTTP methods a client can send.
+        if ($override === 'ANY' || $override === 'LINK') {
+            return $method;
+        }
 
         return \in_array($override, $supportedMethods, true) ? $override : $method;
     }
