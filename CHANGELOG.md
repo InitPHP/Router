@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`_method=ANY` and `_method=LINK` are ignored.** They are route kinds, not HTTP
   methods; the request keeps its real method (`POST`) instead of being routed as
   `ANY`/`LINK`.
+- **`middleware` group options now accumulate.** They were merged by position, so a
+  route (or inner group) declaring `['middleware' => ['Csrf']]` inside a group with
+  `['Auth', 'Log']` ended up with `['Csrf', 'Log']` and `Auth` stopped running.
+  Unkeyed entries and the `before`/`after` buckets are now concatenated, the
+  enclosing group's entries first.
+
+### Fixed
+
+- `group()`, `ip()`, `domain()` and `port()` restore the enclosing group options
+  (`try`/`finally`) when the callback throws, so a caught exception no longer leaks
+  the failed group's `prefix`, `host`, `port`, `ip` or `middleware` into the routes
+  registered afterwards.
 
 ## [4.0.0] - 2026-11-25
 

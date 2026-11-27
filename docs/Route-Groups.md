@@ -112,10 +112,13 @@ $router->ip(['203.0.113.10', '203.0.113.11'], function (Router $route) {
 
 > **Changed in 5.0.0.** Nested `ip()` lists used to be merged by position, so an
 > inner `ip(['203.0.113.10'])` inside `ip(['203.0.113.10', '203.0.113.11'])` also
-> accepted `203.0.113.11`. Review nested `ip()` groups: where the inner list used to
-> widen the outer one, the router now throws. See
-[Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#client-ip-detection) for how the
-client IP is detected.
+> accepted `203.0.113.11`. An inner list can no longer add addresses: overlapping
+> lists are narrowed to the addresses they have in common, and disjoint lists
+> throw. Review nested `ip()` groups that relied on the inner list replacing the
+> outer one.
+
+See [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#client-ip-detection) for how
+the client IP is detected.
 
 The client address is `REMOTE_ADDR`, the address of the TCP peer. `Client-IP` is
 never read. `X-Forwarded-For` is read only when `REMOTE_ADDR` is one of the
@@ -134,7 +137,9 @@ there; otherwise every request appears to come from the proxy itself.
 
 ## Combining groups
 
-Groups nest freely and combine with all the other options:
+Groups nest freely and combine with all the other options. `prefix` and `as`
+accumulate, `ip` narrows to the addresses common to every level, and `middleware`
+accumulates (see [Group middleware](Middleware.md#group-middleware)):
 
 ```php
 $router->domain('{tenant}.example.com', function (Router $route) {
@@ -145,3 +150,7 @@ $router->domain('{tenant}.example.com', function (Router $route) {
 ```
 
 Next: [Controllers](Controllers.md).
+
+If a group callback throws, the router restores the options of the enclosing level
+before the exception propagates, so code that catches it and keeps registering
+routes does not inherit the failed group's `prefix`, `host`, `port` or `ip`.

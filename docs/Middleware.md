@@ -96,6 +96,26 @@ Returning anything else throws [`RouterException`](Exceptions.md).
 > and returns the current response — see
 > [Upgrading 1.x → 2.0](Upgrading-from-1.x-to-2.0.md#middleware-null-return-no-longer-calls-exit).
 
+## Group middleware
+
+A `middleware` option on a group (`['middleware' => [...]]`) applies to every route
+in it. Middleware accumulate across levels: an inner group or a route's own
+`middleware` option is added **after** the middleware of the groups around it, so
+the group's entries run first. Unkeyed ("both") entries and the `before`/`after`
+buckets are each concatenated:
+
+```php
+$router->group('/admin', function (Router $route) {
+    // Runs AuthMiddleware, LogMiddleware, then CsrfMiddleware.
+    $route->get('/users', 'AdminController@users', ['middleware' => [CsrfMiddleware::class]]);
+}, ['middleware' => [AuthMiddleware::class, LogMiddleware::class]]);
+```
+
+> **Changed in 5.0.0.** The lists used to be merged by position, so the route's
+> `[CsrfMiddleware::class]` above replaced the first entry of the group's list and
+> `AuthMiddleware` silently stopped running. If you relied on a route replacing its
+> group's middleware, move that middleware out of the group option.
+
 ## Controller middlewares
 
 A controller may declare middleware via a public `$middlewares` property. Entries
