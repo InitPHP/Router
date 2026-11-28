@@ -103,7 +103,7 @@ in it. Middleware accumulate across levels: an inner group or a route's own
 `middleware` option is added **after** the middleware of the groups around it, so
 the group's entries run first. Unkeyed ("both") entries and the `before`/`after`
 buckets are each concatenated, and a single name or closure counts as a one-entry
-list:
+list at every level, whether or not a group already declares middleware:
 
 ```php
 $router->group('/admin', function (Router $route) {

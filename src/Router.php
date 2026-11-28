@@ -847,10 +847,10 @@ class Router
                 }
                 if ($key === 'middleware') {
                     // A single middleware (a name or a closure) is a one-entry list.
-                    $outer = \is_string($data[$key] ?? null) || ($data[$key] ?? null) instanceof \Closure ? [$data[$key]] : ($data[$key] ?? null);
-                    $inner = \is_string($value) || $value instanceof \Closure ? [$value] : $value;
-                    if (\is_array($outer) && \is_array($inner)) {
-                        $data[$key] = $this->middlewareMerge($outer, $inner);
+                    $inner = $this->middlewareAsList($value);
+                    if (\is_array($inner)) {
+                        $outer = $this->middlewareAsList($data[$key] ?? null);
+                        $data[$key] = \is_array($outer) ? $this->middlewareMerge($outer, $inner) : $inner;
                         continue;
                     }
                 }
@@ -871,6 +871,15 @@ class Router
         }
 
         return $data;
+    }
+
+    /**
+     * A single middleware (a name or a closure) as a one-entry list; any other
+     * value is returned unchanged.
+     */
+    private function middlewareAsList(mixed $middleware): mixed
+    {
+        return \is_string($middleware) || $middleware instanceof \Closure ? [$middleware] : $middleware;
     }
 
     /**

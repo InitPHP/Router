@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   route (or inner group) declaring `['middleware' => ['Csrf']]` inside a group with
   `['Auth', 'Log']` ended up with `['Csrf', 'Log']` and `Auth` stopped running.
   Unkeyed entries and the `before`/`after` buckets are now concatenated, the
-  enclosing group's entries first.
+  enclosing group's entries first. A single name or closure (`'middleware' => 'Auth'`)
+  is treated as a one-entry list at every level, so it also runs when it is the only
+  middleware of a route or group (before, such a value was silently ignored).
 
 ### Fixed
 

@@ -6,6 +6,9 @@ namespace Tests\Router\Regression;
 
 use InitPHP\Router\Exception\InvalidArgumentException;
 use InitPHP\Router\Router;
+use Tests\Router\Unit\Fixtures\HeaderMiddleware;
+
+require_once __DIR__ . '/../Unit/Fixtures/DispatchFixtures.php';
 
 /**
  * Nested `ip()` groups narrow the access list to the intersection of their
@@ -175,6 +178,55 @@ final class NestedIpGroupRegressionTest extends RegressionTestCase
         $routes = $router->getRoutes('GET');
         $this->assertSame(['Auth', 'Csrf'], $routes['http://localhost/admin/s']['options']['middleware']);
         $this->assertSame(['Auth', 'Throttle'], $routes['http://localhost/admin/sub/t']['options']['middleware']);
+    }
+
+    public function testSingleLevelSingleMiddlewareIsStoredAsAOneEntryList(): void
+    {
+        $closure = static fn($request, $response, $arguments) => $response;
+        $router = $this->makeRouter();
+        $router->get('/r', static fn(): string => 'r', ['middleware' => 'Auth']);
+        $router->get('/c', static fn(): string => 'c', ['middleware' => $closure]);
+        $router->group('/g', static function (Router $route): void {
+            $route->get('/x', static fn(): string => 'x');
+        }, ['middleware' => 'Auth']);
+
+        $routes = $router->getRoutes('GET');
+        $this->assertSame(['Auth'], $routes['http://localhost/r']['options']['middleware']);
+        $this->assertSame([$closure], $routes['http://localhost/c']['options']['middleware']);
+        $this->assertSame(['Auth'], $routes['http://localhost/g/x']['options']['middleware']);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function singleMiddlewareLevelProvider(): array
+    {
+        return ['route' => ['route', 'class'], 'group' => ['group', 'class'], 'route closure' => ['route', 'closure'], 'group closure' => ['group', 'closure']];
+    }
+
+    /**
+     * @dataProvider singleMiddlewareLevelProvider
+     */
+    public function testSingleMiddlewareRunsAtDispatch(string $level, string $kind): void
+    {
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $middleware = $kind === 'class'
+            ? HeaderMiddleware::class
+            : static fn($request, $response, $arguments) => $response->withHeader('X-Before', 'ran');
+
+        $router = $this->makeRouter($level === 'group' ? 'http://localhost/g/x' : 'http://localhost/x');
+        if ($level === 'route') {
+            $router->get('/x', static fn(): string => 'body', ['middleware' => $middleware]);
+        } else {
+            $router->group('/g', static function (Router $route): void {
+                $route->get('/x', static fn(): string => 'body');
+            }, ['middleware' => $middleware]);
+        }
+
+        $response = $router->dispatch();
+
+        $this->assertSame('body', (string) $response->getBody());
+        $this->assertSame('ran', $response->getHeaderLine('X-Before'));
     }
 
     public function testStringGroupMiddlewareAcceptsARouteList(): void
