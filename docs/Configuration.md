@@ -60,7 +60,9 @@ $router->put('/articles/{id}', 'ArticleController@update');
 ```
 
 The override is only honoured when the real request method is `POST` and the
-value is one of the supported methods. It is read from the POST parameters only:
+value is a real HTTP method (`GET`, `POST`, `PUT`, `DELETE`, `HEAD`, `PATCH` or
+`OPTIONS`; `ANY` and `LINK` are route kinds and are ignored, the request stays a
+`POST`). It is read from the POST parameters only:
 the parsed body of a PSR-7 server request when it is an array, otherwise
 `$_POST`. A `_method` in the query string, or on a `GET` request, is ignored.
 

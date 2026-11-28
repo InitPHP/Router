@@ -539,9 +539,12 @@ class Router
         }
         $prev_group_options = $this->groupOptions;
         $options['prefix'] = $prefix;
-        $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
-        \call_user_func_array($group, [$this]);
-        $this->groupOptions = $prev_group_options;
+        try {
+            $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
+            \call_user_func_array($group, [$this]);
+        } finally {
+            $this->groupOptions = $prev_group_options;
+        }
     }
 
     /**
@@ -558,9 +561,12 @@ class Router
         }
         $prev_group_options = $this->groupOptions;
         $options['host'] = $host;
-        $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
-        \call_user_func_array($group, [$this]);
-        $this->groupOptions = $prev_group_options;
+        try {
+            $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
+            \call_user_func_array($group, [$this]);
+        } finally {
+            $this->groupOptions = $prev_group_options;
+        }
     }
 
     /**
@@ -577,9 +583,12 @@ class Router
         }
         $prev_group_options = $this->groupOptions;
         $options['port'] = $port;
-        $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
-        \call_user_func_array($group, [$this]);
-        $this->groupOptions = $prev_group_options;
+        try {
+            $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
+            \call_user_func_array($group, [$this]);
+        } finally {
+            $this->groupOptions = $prev_group_options;
+        }
     }
 
     /**
@@ -597,9 +606,12 @@ class Router
         }
         $prev_group_options = $this->groupOptions;
         $options['ip'] = $this->confirmIpAddresses($ip);
-        $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
-        \call_user_func_array($group, [$this]);
-        $this->groupOptions = $prev_group_options;
+        try {
+            $this->groupOptions = $this->optionsMerge($this->groupOptions, $options);
+            \call_user_func_array($group, [$this]);
+        } finally {
+            $this->groupOptions = $prev_group_options;
+        }
     }
 
     /**
@@ -810,13 +822,17 @@ class Router
      * options into one options array.
      *
      * "prefix" and "as" accumulate across levels (so nested groups build up a
-     * combined path/name prefix); nested arrays (namespaces, paths) are merged
-     * leaf-wise; every other key is overridden by the later source. The
+     * combined path/name prefix); "middleware" lists accumulate (the outer
+     * level's entries run first, per bucket); "ip" narrows to the intersection of the
+     * levels (a nested group can never widen the access list); nested arrays
+     * (namespaces, paths) are merged leaf-wise; every other key is overridden
+     * by the later source. The
      * transient "variable_method" and "trusted_proxies" keys and a redundant "/" base path are dropped.
      *
      * @param array<string, mixed> $base
      * @param array<string, mixed> ...$overrides
      * @return array<string, mixed>
+     * @throws InvalidArgumentException When nested "ip" lists have no address in common.
      */
     private function optionsMerge(array $base, array ...$overrides): array
     {
@@ -827,6 +843,19 @@ class Router
                     && \is_string($value)
                     && \is_string($data[$key] ?? null)) {
                     $data[$key] .= $value;
+                    continue;
+                }
+                if ($key === 'middleware') {
+                    // A single middleware (a name or a closure) is a one-entry list.
+                    $inner = $this->middlewareAsList($value);
+                    if (\is_array($inner)) {
+                        $outer = $this->middlewareAsList($data[$key] ?? null);
+                        $data[$key] = \is_array($outer) ? $this->middlewareMerge($outer, $inner) : $inner;
+                        continue;
+                    }
+                }
+                if ($key === 'ip' && isset($data[$key]) && $data[$key] !== [] && $data[$key] !== '') {
+                    $data[$key] = $this->ipIntersect($data[$key], $value);
                     continue;
                 }
                 if (\is_array($value) && \is_array($data[$key] ?? null)) {
@@ -842,6 +871,78 @@ class Router
         }
 
         return $data;
+    }
+
+    /**
+     * A single middleware (a name or a closure) as a one-entry list; any other
+     * value is returned unchanged.
+     */
+    private function middlewareAsList(mixed $middleware): mixed
+    {
+        return \is_string($middleware) || $middleware instanceof \Closure ? [$middleware] : $middleware;
+    }
+
+    /**
+     * Accumulates two "middleware" options: the unkeyed ("both") entries and the
+     * "before"/"after" buckets are each concatenated, the outer level's entries
+     * first, so an inner group or route adds to — never replaces — the filters of
+     * the groups around it.
+     *
+     * @param array<array-key, mixed> $outer
+     * @param array<array-key, mixed> $inner
+     * @return array<array-key, mixed>
+     */
+    private function middlewareMerge(array $outer, array $inner): array
+    {
+        $split = static function (array $middleware): array {
+            $buckets = [];
+            foreach (['before', 'after'] as $bucket) {
+                if (isset($middleware[$bucket]) && \is_array($middleware[$bucket])) {
+                    $buckets[$bucket] = \array_values($middleware[$bucket]);
+                }
+                unset($middleware[$bucket]);
+            }
+
+            return [\array_values($middleware), $buckets];
+        };
+        [$outerBoth, $outerBuckets] = $split($outer);
+        [$innerBoth, $innerBuckets] = $split($inner);
+
+        $merged = \array_merge($outerBoth, $innerBoth);
+        foreach (['before', 'after'] as $bucket) {
+            if (isset($outerBuckets[$bucket]) || isset($innerBuckets[$bucket])) {
+                $merged[$bucket] = \array_merge($outerBuckets[$bucket] ?? [], $innerBuckets[$bucket] ?? []);
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Intersects two "ip" access lists (each a string or a list), comparing
+     * canonical addresses so "::ffff:192.0.2.1" and "192.0.2.1" are the same.
+     * An empty intersection is an error: an empty list never means "everyone".
+     *
+     * @return list<string>
+     * @throws InvalidArgumentException When the lists have no address in common.
+     */
+    private function ipIntersect(mixed $outer, mixed $inner): array
+    {
+        $canonical = static function (mixed $list): array {
+            $result = [];
+            foreach (\is_array($list) ? $list : [$list] as $address) {
+                if (\is_string($address)) {
+                    $result[RequestContext::normalizeIp($address) ?? $address] = true;
+                }
+            }
+            return $result;
+        };
+        $common = \array_keys(\array_intersect_key($canonical($outer), $canonical($inner)));
+        if ($common === []) {
+            throw new InvalidArgumentException('Nested ip() groups must share at least one IP address; the intersection of the access lists is empty.');
+        }
+
+        return \array_map('strval', $common);
     }
 
     /**

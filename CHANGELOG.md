@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed (breaking)
+
+- **Nested `ip()` groups now intersect.** The inner list used to be merged with the
+  outer one by position (`array_replace`), so `ip(['1.1.1.1'])` inside
+  `ip(['1.1.1.1', '2.2.2.2'])` still accepted `2.2.2.2`. Now a route inside nested
+  groups (or a per-route `ip` option inside a group) is reachable only from addresses
+  present in every level, compared in canonical form (`::ffff:1.1.1.1` equals
+  `1.1.1.1`). An empty intersection throws `InvalidArgumentException` at
+  registration; it never means "everyone".
+- **`_method=ANY` and `_method=LINK` are ignored.** They are route kinds, not HTTP
+  methods; the request keeps its real method (`POST`) instead of being routed as
+  `ANY`/`LINK`.
+- **`middleware` group options now accumulate.** They were merged by position, so a
+  route (or inner group) declaring `['middleware' => ['Csrf']]` inside a group with
+  `['Auth', 'Log']` ended up with `['Csrf', 'Log']` and `Auth` stopped running.
+  Unkeyed entries and the `before`/`after` buckets are now concatenated, the
+  enclosing group's entries first. A single name or closure (`'middleware' => 'Auth'`)
+  is treated as a one-entry list at every level, so it also runs when it is the only
+  middleware of a route or group (before, such a value was silently ignored).
+
+### Fixed
+
+- `group()`, `ip()`, `domain()` and `port()` restore the enclosing group options
+  (`try`/`finally`) when the callback throws, so a caught exception no longer leaks
+  the failed group's `prefix`, `host`, `port`, `ip` or `middleware` into the routes
+  registered afterwards.
+
 ## [4.0.0] - 2026-11-25
 
 ### Security

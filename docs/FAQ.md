@@ -59,7 +59,8 @@ $router->group('/admin', function (Router $route) {
 }, ['middleware' => [AuthMiddleware::class]]);
 ```
 
-See [Middleware](Middleware.md).
+Middleware options accumulate across nested groups and routes; see
+[Group middleware](Middleware.md#group-middleware).
 
 ## Behaviour
 
